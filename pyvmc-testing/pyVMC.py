@@ -1517,6 +1517,7 @@ def getSDDCT0PrefixLists(csp_url, session_token):
 def removeBPGprefixlist(csp_url, session_token, prefix_list_id):
     myHeader = {'csp-auth-token': session_token}
     myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+    print(myURL)
     response = requests.delete(myURL, headers=myHeader)
     json_response = response.status_code
     print(json_response)
@@ -1529,32 +1530,38 @@ def removeBPGprefixlist(csp_url, session_token, prefix_list_id):
 def newBGPprefixlist(csp_url, session_token):
     myHeader = {'csp-auth-token': session_token}
     # create python dictionary to contain the prefix list
-#    description= input('Enter a description name for the prefix list:  ')
-#    display_name= input('Enter a display name for the prefix list:  ')
+    description= input('Enter a description name for the prefix list:  ')
+    display_name= input('Enter a display name for the prefix list:  ')
     prefix_list_id= input('Enter an ID string for the prefix list:  ')
     prefix_list = {
-#        "description": description,
-#        "display_name": display_name,
-#        "id": prefix_list_id, 
+        "description": description,
+        "display_name": display_name,
+        "id": prefix_list_id, 
         "prefixes": [ 
         ]
     }
 
-    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/{prefix_list_id}'
+    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+#    myURL = 'https://10.125.192.3/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+#    myURL = 'https://nsxmanager.sddc-35-83-245-127.vmwarevmc.com/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+#    myURL = f'{csp_url}/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+#    myURL = 'https://nsx-35-83-245-127.rp.vmwarevmc.com/vmc/reverse-proxy/api/orgs/b7793958-b6b6-4916-a008-40c5c47ec24c/sddcs/668626e9-da8f-4496-b77a-d5a9656a031d/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+
     print(myURL)
+#    print(session_token)
     # append individual prefixes to the list
     # begin input loop
     test = ''
     while test != 'f':
-        test=input('What would you like to do? Add prefix (a) / Review list (r) / Finish (f)  ')
-        if test== "a":
+        test=input('What would you like to do? New prefix (n) / Review list (r) / Finish (f) / Abort (a) ')
+        if test== "n":
             cidr = input('Enter a network or IP address in CIDR format:  ')
             action= input('Enter the action (PERMIT or DENY):  ')
-#            scope= input('Optional - Enter either le or ge:  ')
-#            length= int(input('Optional - Enter the length of the mask to apply:  '))
+            scope= input('Optional - Enter either le or ge:  ')
+            length= int(input('Optional - Enter the length of the mask to apply:  '))
             new_prefix= {
                 "action": action,
-#                scope: length,
+                scope: length,
                 "network": cidr
                 }
             prefix_list["prefixes"].append(new_prefix)
@@ -1563,18 +1570,20 @@ def newBGPprefixlist(csp_url, session_token):
             print("Please review the prefix list carefully... be sure you are not going to block all traffic!")
             print(prefix_list)
         elif test == 'f':
-            json_data = json.dumps(prefix_list, indent=2)
+            json_data = json.dumps(prefix_list)
             print(json_data)
             response = requests.patch(myURL, headers=myHeader, json=json_data)
-            json_response_status_code = response.status_code
+#            json_response_status_code = response.status_code
             if response.status_code == 200:
                 print("prefix list added")
             else:
                 print(response.status_code)
                 print(response.json())
                 print()
+        elif test == 'a':
+            break
         else:
-            print("Incorrect syntax. Please use 'a,' 'r,' or 'f' - Try again or check the help.")
+            print("Incorrect syntax. Please use 'n,' 'r,' 'f' or 'a' - Try again or check the help.")
 
 def getSDDCT0BGPneighbors(proxy_url, session_token):
     myHeader = {'csp-auth-token': session_token}
