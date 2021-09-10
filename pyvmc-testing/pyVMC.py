@@ -1514,19 +1514,6 @@ def getSDDCT0PrefixLists(csp_url, session_token):
     else:
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
-def removeBPGprefixlist(csp_url, session_token, prefix_list_id):
-    myHeader = {'csp-auth-token': session_token}
-    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
-    print(myURL)
-    response = requests.delete(myURL, headers=myHeader)
-    json_response = response.status_code
-    print(json_response)
-    if json_response == 200 :
-        print("The BGP prefix list " + prefix_list_id + " has been deleted")
-    else :
-        print("There was an error. Try again.")
-    return json_response
-
 def newBGPprefixlist(csp_url, session_token):
 #    myHeader = {'csp-auth-token': session_token}
     myHeader = {'Authorization': f'Bearer {session_token}', 'Content-type': 'application/json'}
@@ -1579,6 +1566,19 @@ def newBGPprefixlist(csp_url, session_token):
             break
         else:
             print("Incorrect syntax. Please use 'n,' 'r,' 'f' or 'a' - Try again or check the help.")
+
+def removeBPGprefixlist(csp_url, session_token, prefix_list_id):
+    myHeader = {'csp-auth-token': session_token}
+    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
+    print(myURL)
+    response = requests.delete(myURL, headers=myHeader)
+    json_response = response.status_code
+    print(json_response)
+    if json_response == 200 :
+        print("The BGP prefix list " + prefix_list_id + " has been deleted")
+    else :
+        print("There was an error. Try again.")
+    return json_response
 
 def getSDDCT0BGPneighbors(proxy_url, session_token):
     myHeader = {'csp-auth-token': session_token}
