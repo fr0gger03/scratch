@@ -1178,7 +1178,7 @@ def newSDDCGroupGr(proxy_url,sessiontoken,gw,group_id,member_of_group):
 
     response = requests.put(myURL, headers=myHeader, json=json_data)
     json_response_status_code = response.status_code
-    print(response.text)
+    #print(response.text)
     return json_response_status_code
 
 def newSDDCGroupVM(proxy_url,sessiontoken,gw,group_id,vm_list):
@@ -1324,8 +1324,6 @@ def createLotsNetworks(proxy_url, sessiontoken,network_number):
 
 def addUsersToCSPGroup(csp_url, session_token):
     myHeader = {'csp-auth-token': session_token,'Content-Type': 'application/json'}
-    groupId = '3d6f43a8-218b-4b50-9d80-92af8878c4ed'
-    #usernamesToAdd = ['pk@kremerdev.com','pkremer@kremerdev.com']
 
     if len(sys.argv) < 4:
         print('Usage: add-users-to-csp-group [groupID] [comma separated email addresses')
@@ -1346,6 +1344,39 @@ def addUsersToCSPGroup(csp_url, session_token):
         print(f"Failed: {response_json['failed']}" )
     else:
         print (f'Operation failed with status code {response.status_code}. URL: {myURL}. Body: {params}')
+
+def getCSPServiceRoles(csp_url, session_token):
+    myHeader = {'csp-auth-token': session_token}
+    myURL = csp_url + f'/csp/gateway/am/api/loggedin/user/orgs/{ORG_ID}/service-roles'
+    response = requests.get(myURL,headers=myHeader)
+    json_response = response.json()
+    #print(json.dumps(json_response, indent=4))
+    for svc_def in json_response['serviceRoles']:
+        for svc_role in svc_def['serviceRoleNames']:
+            print(svc_role)
+
+def findCSPUserByServiceRole(csp_url, session_token):
+    myHeader = {'csp-auth-token': session_token}
+    if len(sys.argv) < 3:
+        print('Usage: find-csp-user-by-service-role [role]')
+        sys.exit()
+
+    role_name= sys.argv[2]
+    myURL = csp_url + f'/csp/gateway/am/api/v2/orgs/{ORG_ID}/users'
+    response = requests.get(myURL,headers=myHeader)
+    json_response = response.json()
+    users = json_response['results']
+    table = PrettyTable(['Email','Service Role', 'Org Role'])
+    for user in users:
+        for servicedef in user['serviceRoles']:
+            for role in servicedef['serviceRoles']:
+                if role['name'] == role_name:
+                    display_role = ''
+                    for orgrole in user['organizationRoles']:
+                        display_role = display_role + orgrole['name'] + ' '
+                    table.add_row([user['user']['email'],role_name,display_role])
+    print(table)
+
 def getCSPGroupDiff(csp_url, session_token):
     myHeader = {'csp-auth-token': session_token}
     if len(sys.argv) < 3:
@@ -1480,7 +1511,6 @@ def getCSPGroupMembers(csp_url, session_token):
 def getSDDCT0PrefixLists(csp_url, session_token):
     myHeader = {'csp-auth-token': session_token}
     myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists'
-    print(myURL)
     response = requests.get(myURL, headers=myHeader)
     if response.status_code == 200:
         json_response = response.json()
@@ -1515,7 +1545,6 @@ def getSDDCT0PrefixLists(csp_url, session_token):
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
 def newBGPprefixlist(csp_url, session_token):
-#    myHeader = {'csp-auth-token': session_token}
     myHeader = {'Authorization': f'Bearer {session_token}', 'Content-type': 'application/json'}
 #   capture details for new prefix list
     description= input('Enter a description name for the prefix list:  ')
@@ -1528,7 +1557,6 @@ def newBGPprefixlist(csp_url, session_token):
     prefix_list["id"] = prefix_list_id
     prefix_list["prefixes"] = []
     myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
-#   print(myURL)
 #   append individual prefixes to the list
 #   begin input loop
     test = ''
@@ -1551,11 +1579,7 @@ def newBGPprefixlist(csp_url, session_token):
             print("Please review the prefix list carefully... be sure you are not going to block all traffic!")
             print(prefix_list)
         elif test == 'f':
-#            json_data = json.dumps(prefix_list)
-#            print(json_data)
-#            response = requests.patch(myURL, headers=myHeader, json=json_data)
             response = requests.patch(myURL, headers=myHeader, json=prefix_list)
-#            json_response_status_code = response.status_code
             if response.status_code == 200:
                 print("prefix list added")
             else:
@@ -1570,19 +1594,17 @@ def newBGPprefixlist(csp_url, session_token):
 def removeBPGprefixlist(csp_url, session_token, prefix_list_id):
     myHeader = {'csp-auth-token': session_token}
     myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id
-    print(myURL)
     response = requests.delete(myURL, headers=myHeader)
     json_response = response.status_code
-    print(json_response)
     if json_response == 200 :
         print("The BGP prefix list " + prefix_list_id + " has been deleted")
     else :
-        print("There was an error. Try again.")
+        print("Error " + json_response + ". Please try again.")
     return json_response
 
-def getSDDCT0BGPneighbors(proxy_url, session_token):
+def getSDDCT0BGPneighbors(csp_url, session_token):
     myHeader = {'csp-auth-token': session_token}
-    myURL = (proxy_url + "/policy/api/v1/infra/tier-0s/vmc/locale-services/default/bgp/neighbors")
+    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/locale-services/default/bgp/neighbors'
     response = requests.get(myURL, headers=myHeader)
     if response.status_code == 200:
         json_response = response.json()
@@ -1667,6 +1689,8 @@ def getSDDCInternetStats(proxy_url, sessiontoken, edge_path):
 def getHelp():
     print("\nWelcome to PyVMC !")
     print("\nHere are the currently supported commands: ")
+    print("\nTo search for CSP users with a specific service role:")
+    print("\tfind-csp-user-by-service-role [service role name]")
     print("\nTo get a list of your VMs:")
     print("\tshow-vms")
     print("\nTo display a lit of your SDDCs:")
@@ -1696,6 +1720,8 @@ def getHelp():
     print("\tshow-csp-group-diff [GROUP_ID] [showall|skipmembers|skipowners]")
     print("\nTo show a CSP user:")
     print("\tshow-csp-org-users [email]")
+    print("\nTo show CSP service roles for the currently logged in user:")
+    print("\tshow-csp-service-roles")
     print("\nTo show the CGW security rules:")
     print("\tshow-cgw-rule")
     print("\nTo create a new CGW security rule")
@@ -1804,13 +1830,14 @@ def getHelp():
     print("\nTo show routes at the T0 router:")
     print("\tshow-t0-routes")
     print("\nTo show T0 BGP neighbors:")
-    print("\tshow-t0-bgp-neighbors [showjson]")    
+    print("\tshow-t0-bgp-neighbors [showjson]")
     print("\nTo show T0 prefix lists:")
-    print("\tshow-t0-prefix-lists [showjson]")    
-    print("\nTo remove a T0 BGP Prefix List")
-    print("\tremove-t0-prefix-list [PREFIX LIST ID] - you can see current prefix list with 'show-t0-prefix-lists'")
+    print("\tshow-t0-prefix-lists [showjson]")
     print("\nTo create a new T0 BGP Prefix List")
     print("\tnew-t0-prefix-list")
+    print("\nTo remove a T0 BGP Prefix List")
+    print("\tremove-t0-prefix-list [PREFIX LIST ID] - you can see current prefix list with 'show-t0-prefix-lists'")
+
 
 # --------------------------------------------
 # ---------------- Main ----------------------
@@ -1837,18 +1864,21 @@ elif intent_name == "show-csp-group-members":
         getCSPGroupMembers(strCSPProdURL,session_token)
 elif intent_name == "show-csp-org-users":
     getCSPOrgUsers(strCSPProdURL,session_token)
+elif intent_name == "show-csp-service-roles":
+    getCSPServiceRoles(strCSPProdURL,session_token)
+elif intent_name == "find-csp-user-by-service-role":
+    findCSPUserByServiceRole(strCSPProdURL,session_token)
 elif intent_name == "show-t0-routes":
     getSDDCT0routes(proxy,session_token)
 elif intent_name == "show-t0-bgp-neighbors":
-    print()
     getSDDCT0BGPneighbors(proxy, session_token)
-elif intent_name == "show-t0-prefix-lists":
-    getSDDCT0PrefixLists(proxy, session_token)   
 elif intent_name == "new-t0-prefix-list":
     newBGPprefixlist(proxy, session_token)
 elif intent_name == "remove-t0-prefix-list":
     prefix_list_id = sys.argv[2]
     removeBPGprefixlist(proxy, session_token, prefix_list_id)
+elif intent_name == "show-t0-prefix-lists":
+    getSDDCT0PrefixLists(proxy, session_token)    
 elif intent_name == "show-egress-interface-counters":
     edge_cluster_id = getSDDCEdgeCluster(proxy, session_token)
     edge_path_0 = getSDDCEdgeNodes(proxy, session_token, edge_cluster_id, 0)
