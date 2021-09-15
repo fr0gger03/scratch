@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The shebang above is to tell the shell which interpreter to use. This make the file executable without "python3" in front of it (otherwise I had to use python3 pyvmc.py)
 # I also had to change the permissions of the file to make it run. "chmod +x pyVMC.py" did the trick.
-# I also added "export PATH="MY/PYVMC/DIRECTORY":$PATH" (otherwise I had to use ./pyVMC.py)
+# I also added "export PATH="MY/PYVMC/DIRECTORY":$PATH" (otherwise I had to use ./pyvmc.y)
 # For git BASH on Windows, you can use something like this #!/C/Users/usr1/AppData/Local/Programs/Python/Python38/python.exe
 
 # Python Client for VMware Cloud on AWS
@@ -47,6 +47,8 @@ strCSPProdURL   = config.get("vmcConfig", "strCSPProdURL")
 Refresh_Token   = config.get("vmcConfig", "refresh_Token")
 ORG_ID          = config.get("vmcConfig", "org_id")
 SDDC_ID         = config.get("vmcConfig", "sddc_id")
+
+
 
 
 class data():
@@ -1640,6 +1642,60 @@ def getSDDCT0BGPneighbors(csp_url, session_token):
     else:
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
+def attachSDDCT0PrefixList (csp_url, session_token):
+    myHeader = {'csp-auth-token': session_token}
+    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/locale-services/default/bgp/neighbors'
+    response = requests.get(myURL, headers=myHeader)
+    if response.status_code == 200:
+        json_response = response.json()
+        bgp_neighbors = json_response['results']
+#       build new json as unique dictionary including prefix attach
+#        neighbor["route_filtering"] = [ {
+#                "address_family": "IPV4",
+#                "enabled": "true",
+#                "out_route_filters": [ "/infra/tier-0s/vmc/prefix-lists/stretch-filter" ]
+#            }]
+        for neighbor in bgp_neighbors:
+            del neighbor['_create_time']
+            del neighbor['_create_user']
+            del neighbor['_last_modified_time']
+            del neighbor['_last_modified_user']
+            del neighbor['_system_owned']
+            del neighbor['_protection']
+            del neighbor['_revision']
+#        print(bgp_neighbors)
+
+        bgp_table = PrettyTable(['ID','Remote AS Num','Remote Address'])
+        for neighbor in bgp_neighbors:
+            bgp_table.add_row([neighbor['id'],neighbor['remote_as_num'],neighbor['neighbor_address']])
+        print('NEIGHBORS:')
+        print(bgp_table)
+        filter_table = PrettyTable(['Enabled','Address Family','Out Filter','In Filter'])
+        if neighbor.get("route_filtering"):
+            for filter in neighbor['route_filtering']:
+                if filter.get('out_route_filters'):
+                    out_route_filters = filter['out_route_filters']
+                else:
+                    out_route_filters = "-"
+
+                if filter.get('in_route_filters'):
+                        in_route_filters = filter['in_route_filters']
+                else:
+                    in_route_filters = "-"
+                filter_table.add_row([filter['enabled'],filter['address_family'],out_route_filters,in_route_filters])
+            print("FILTERS:")
+            print (filter_table)
+
+#   ask for user input to select which neighbor
+
+
+        if len(sys.argv) == 3:
+            if sys.argv[2] == "showjson":
+                print('RAW JSON:')
+                print(json.dumps(bgp_neighbors,indent=2))
+    else:
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+
 def getSDDCT0routes(proxy_url, session_token):
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/policy/api/v1/infra/tier-0s/vmc/routing-table?enforcement_point_path=/infra/sites/default/enforcement-points/vmc-enforcementpoint".format(proxy_url)
@@ -1691,7 +1747,7 @@ def getSDDCInternetStats(proxy_url, sessiontoken, edge_path):
         print("fail")
 
 def getHelp():
-    print("\nWelcome to PyVMC!")
+    print("\nWelcome to PyVMC !")
     print("\nHere are the currently supported commands: ")
     print("\nAWS Account and VPC")
     print("\tset-sddc-connected-services: change whether to use S3 over the Internet or via the ENI")
@@ -1825,6 +1881,9 @@ elif intent_name == "remove-t0-prefix-list":
     removeBPGprefixlist(proxy, session_token, prefix_list_id)
 elif intent_name == "show-t0-prefix-lists":
     getSDDCT0PrefixLists(proxy, session_token)    
+elif intent_name == "attach-t0-prefix-lists":
+#    prefix_list_id = sys.argv[2]
+    attachSDDCT0PrefixList(proxy, session_token)    
 elif intent_name == "show-egress-interface-counters":
     edge_cluster_id = getSDDCEdgeCluster(proxy, session_token)
     edge_path_0 = getSDDCEdgeNodes(proxy, session_token, edge_cluster_id, 0)
