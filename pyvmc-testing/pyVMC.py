@@ -1623,7 +1623,7 @@ def attachT0BGPprefixlist(csp_url, session_token, prefix_list_id, route_filter_d
         del neighbor_json['_protection']
         del neighbor_json['_revision']
         neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4', direction: ['/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id]}]
-        print(neighbor_json)
+        print (neighbor_json['route_filtering'][0][direction][0])
         response = requests.patch(myURL, headers=myHeader, json = neighbor_json)
         if response.status_code == 200:
             print("prefix list " + prefix_list_id + " added to " + direction + " for " + neighbor_id)
@@ -1649,7 +1649,6 @@ def detachT0BGPprefixlists(csp_url, session_token, neighbor_id):
         del neighbor_json['_protection']
         del neighbor_json['_revision']
         neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4'}]
-        print(neighbor_json)
         response = requests.patch(myURL, headers=myHeader, json = neighbor_json)
         if response.status_code == 200:
             print("Prefix lists detached from " + neighbor_id)
@@ -1659,7 +1658,6 @@ def detachT0BGPprefixlists(csp_url, session_token, neighbor_id):
             print()
     else:
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
-
 
 def removeBPGprefixlist(csp_url, session_token, prefix_list_id):
     myHeader = {'csp-auth-token': session_token}
@@ -1680,26 +1678,16 @@ def getSDDCT0BGPneighbors(csp_url, session_token):
         json_response = response.json()
         bgp_neighbors = json_response['results']
         print(bgp_neighbors)
-        bgp_table = PrettyTable(['ID','Remote AS Num','Remote Address'])
+        bgp_table = PrettyTable(['ID','Remote AS Num','Remote Address','In_route_filter','Out_route_filter'])
         for neighbor in bgp_neighbors:
-            bgp_table.add_row([neighbor['id'],neighbor['remote_as_num'],neighbor['neighbor_address']])
+            if neighbor.get("in_route_filters"):
+                bgp_table.add_row([neighbor['id'],neighbor['remote_as_num'],neighbor['neighbor_address'],neighbor['in_route_filters'], "-"])
+            elif neighbor.get("out_route_filters"):
+                bgp_table.add_row([neighbor['id'],neighbor['remote_as_num'],neighbor['neighbor_address'],"-",neighbor['out_route_filters'],])
+            else:
+                bgp_table.add_row([neighbor['id'],neighbor['remote_as_num'],neighbor['neighbor_address'],"-", "-"])
         print('NEIGHBORS:')
         print(bgp_table)
-        filter_table = PrettyTable(['Enabled','Address Family','Out Filter','In Filter'])
-        if neighbor.get("route_filtering"):
-            for filter in neighbor['route_filtering']:
-                if filter.get('out_route_filters'):
-                    out_route_filters = filter['out_route_filters']
-                else:
-                    out_route_filters = "-"
-
-                if filter.get('in_route_filters'):
-                        in_route_filters = filter['in_route_filters']
-                else:
-                    in_route_filters = "-"
-                filter_table.add_row([filter['enabled'],filter['address_family'],out_route_filters,in_route_filters])
-            print("FILTERS:")
-            print (filter_table)
         if len(sys.argv) == 3:
             if sys.argv[2] == "showjson":
                 print('RAW JSON:')
