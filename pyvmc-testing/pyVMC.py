@@ -1615,13 +1615,9 @@ def attachT0BGPprefixlist(csp_url, session_token, prefix_list_id, route_filter_d
     if response.status_code == 200:
         json_response = response.json()
         neighbor_json = json_response
-        del neighbor_json['_create_time']
-        del neighbor_json['_create_user']
-        del neighbor_json['_last_modified_time']
-        del neighbor_json['_last_modified_user']
-        del neighbor_json['_system_owned']
-        del neighbor_json['_protection']
-        del neighbor_json['_revision']
+        for key in list(neighbor_json.keys()):
+            if key.startswith('_'):
+                del neighbor_json[key]
         neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4', direction: ['/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id]}]
         print (neighbor_json['route_filtering'][0][direction][0])
         response = requests.patch(myURL, headers=myHeader, json = neighbor_json)
@@ -1641,13 +1637,9 @@ def detachT0BGPprefixlists(csp_url, session_token, neighbor_id):
     if response.status_code == 200:
         json_response = response.json()
         neighbor_json = json_response
-        del neighbor_json['_create_time']
-        del neighbor_json['_create_user']
-        del neighbor_json['_last_modified_time']
-        del neighbor_json['_last_modified_user']
-        del neighbor_json['_system_owned']
-        del neighbor_json['_protection']
-        del neighbor_json['_revision']
+        for key in list(neighbor_json.keys()):
+            if key.startswith('_'):
+                del neighbor_json[key]
         neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4'}]
         response = requests.patch(myURL, headers=myHeader, json = neighbor_json)
         if response.status_code == 200:
@@ -1677,7 +1669,6 @@ def getSDDCT0BGPneighbors(csp_url, session_token):
     if response.status_code == 200:
         json_response = response.json()
         bgp_neighbors = json_response['results']
-        print(bgp_neighbors)
         bgp_table = PrettyTable(['ID','Remote AS Num','Remote Address','In_route_filter','Out_route_filter'])
         for neighbor in bgp_neighbors:
             if neighbor.get("in_route_filters"):
@@ -1756,6 +1747,7 @@ def getHelp():
     print("\tshow-shadow-account: show the Shadow AWS Account VMC is deployed in")
     print("\nBGP and Networking")
     print("\tattach-t0-prefix-list [PREFIX LIST ID] [IN / OUT] [BGP NEIGHBOR ID]: attach a BGP Prefix List to a T0 BGP neighbor")
+    print("\tdetach-t0-prefix-lists [BGP NEIGHBOR ID]: detach all prefix lists from specified neighbor")
     print("\tnew-t0-prefix-list: create a new T0 BGP Prefix List")
     print("\tremove-t0-prefix-list [PREFIX LIST ID]: you can see current prefix list with 'show-t0-prefix-lists': remove a T0 BGP Prefix List")
     print("\tset-bgp-as [ASN]: update the BGP AS number")
