@@ -1580,15 +1580,21 @@ def newBGPprefixlist(csp_url, session_token):
         test=input('What would you like to do? ')
         if test== "2":
 #           capture details of new prefix from user
-            cidr = input('Enter a network or IP address in CIDR format:  ')
+            cidr = input('Enter "ANY" or a network or IP address in CIDR format:  ')
             action= input('Enter the action (PERMIT or DENY):  ')
-            scope= input('Optional - Enter either le or ge:  ')
-            length= int(input('Optional - Enter the length of the mask to apply:  '))
+            if action == "PERMIT" or action == "DENY":
+                scope= input('Optional - Enter either le or ge:  ')
+                if scope != "":
+                    length= int(input('Required - Enter the length of the mask to apply:  '))
+            else:
+                print('Action must be either "PERMIT" or "DENY"')
+                break
 #           build new prefix as unique dictionary
             new_prefix = {}
             new_prefix["action"] = action
-            new_prefix[scope] = length
             new_prefix["network"] = cidr
+            if scope !="" and length != "":
+                new_prefix[scope] = length
 #           append new prefix to list of prefixes in prefix_list
             prefix_list["prefixes"].append(new_prefix)
         elif test == "3":
@@ -1619,10 +1625,9 @@ def attachT0BGPprefixlist(csp_url, session_token, prefix_list_id, route_filter_d
             if key.startswith('_'):
                 del neighbor_json[key]
         neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4', direction: ['/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id]}]
-        print (neighbor_json['route_filtering'][0][direction][0])
         response = requests.patch(myURL, headers=myHeader, json = neighbor_json)
         if response.status_code == 200:
-            print("prefix list " + prefix_list_id + " added to " + direction + " for " + neighbor_id)
+            print("Prefix list " + prefix_list_id + " added to " + direction + " for " + neighbor_id)
         else:
             print(response.status_code)
             print(response.json())
@@ -1746,7 +1751,7 @@ def getHelp():
     print("\tshow-sddc-connected-vpc: show the VPC connected to the SDDC")
     print("\tshow-shadow-account: show the Shadow AWS Account VMC is deployed in")
     print("\nBGP and Networking")
-    print("\tattach-t0-prefix-list [PREFIX LIST ID] [IN / OUT] [BGP NEIGHBOR ID]: attach a BGP Prefix List to a T0 BGP neighbor")
+    print("\tattach-t0-prefix-list [PREFIX LIST ID] [in / out] [BGP NEIGHBOR ID]: attach a BGP Prefix List to a T0 BGP neighbor")
     print("\tdetach-t0-prefix-lists [BGP NEIGHBOR ID]: detach all prefix lists from specified neighbor")
     print("\tnew-t0-prefix-list: create a new T0 BGP Prefix List")
     print("\tremove-t0-prefix-list [PREFIX LIST ID]: you can see current prefix list with 'show-t0-prefix-lists': remove a T0 BGP Prefix List")
