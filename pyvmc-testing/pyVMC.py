@@ -1673,7 +1673,7 @@ def attachT0BGPprefixlist(csp_url, session_token, neighbor_id):
         elif test == "6":
             break
         else:
-            print("Please choose 1, 2, 3 or 4 - Try again or check the help.")       
+            print("Please choose 1, 2, 3 or 4 - Try again or check the help.")
 
 def detachT0BGPprefixlists(csp_url, session_token, neighbor_id):
     myHeader = {'Authorization': f'Bearer {session_token}', 'Content-type': 'application/json'}
@@ -1794,7 +1794,7 @@ def getHelp():
     print("\tshow-sddc-connected-vpc: show the VPC connected to the SDDC")
     print("\tshow-shadow-account: show the Shadow AWS Account VMC is deployed in")
     print("\nBGP and Networking")
-    print("\tattach-t0-prefix-list [PREFIX LIST ID] [in / out] [BGP NEIGHBOR ID]: attach a BGP Prefix List to a T0 BGP neighbor")
+    print("\tattach-t0-prefix-list [BGP NEIGHBOR ID]: attach a BGP Prefix List to a T0 BGP neighbor")
     print("\tdetach-t0-prefix-lists [BGP NEIGHBOR ID]: detach all prefix lists from specified neighbor")
     print("\tnew-t0-prefix-list: create a new T0 BGP Prefix List")
     print("\tremove-t0-prefix-list [PREFIX LIST ID]: you can see current prefix list with 'show-t0-prefix-lists': remove a T0 BGP Prefix List")
