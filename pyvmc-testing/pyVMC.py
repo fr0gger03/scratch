@@ -1578,15 +1578,7 @@ def newBGPprefixlist(csp_url, session_token):
         print("\t4- Abort")
         print("\n")
         test=input('What would you like to do? ')
-        if test == "1":
-            response = requests.patch(myURL, headers=myHeader, json=prefix_list)
-            if response.status_code == 200:
-                print("prefix list added")
-            else:
-                print(response.status_code)
-                print(response.json())
-                print()
-        elif test== "2":
+        if test== "2":
 #           capture details of new prefix from user
             cidr = input('Enter "ANY" or a network or IP address in CIDR format:  ')
             action= input('Enter the action (PERMIT or DENY):  ')
@@ -1608,6 +1600,14 @@ def newBGPprefixlist(csp_url, session_token):
         elif test == "3":
             print("Please review the prefix list carefully... be sure you are not going to block all traffic!")
             print(prefix_list)
+        elif test == "1":
+            response = requests.patch(myURL, headers=myHeader, json=prefix_list)
+            if response.status_code == 200:
+                print("prefix list added")
+            else:
+                print(response.status_code)
+                print(response.json())
+                print()
         elif test == "4":
             break
         else:
@@ -1738,16 +1738,15 @@ def getSDDCT0routes(proxy_url, session_token):
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/policy/api/v1/infra/tier-0s/vmc/routing-table?enforcement_point_path=/infra/sites/default/enforcement-points/vmc-enforcementpoint".format(proxy_url)
     response = requests.get(myURL, headers=myHeader)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     json_response = response.json()
-    count = json_response['results'][1]['count']
-    for i in range (int(count)):
-        print("---------------------------------------")
-        print ("Route type:     " + json_response['results'][1]['route_entries'][i]['route_type'])
-        print ("Network:        " + json_response['results'][1]['route_entries'][i]['network'])
-        print ("Admin distance: " + str(json_response['results'][1]['route_entries'][i]['admin_distance']))
-        print ("Next hop:       " + json_response['results'][1]['route_entries'][i]['next_hop'])
+    t0_routes = json_response['results'][1]['route_entries']
+    route_table = PrettyTable(['Route Type', 'Network', 'Admin Distance', 'Next Hop'])
+    for routes in t0_routes:
+        route_table.add_row([routes['route_type'],routes['network'],routes['admin_distance'],routes['next_hop']])
+    print ('T0 Routes')
+    print ('Route Type Legend:')
+    print ('t0c - Tier-0 Connected\nt0s - Tier-0 Static\nb - BGP\nt0n - Tier-0 NAT\nt1s - Tier-1 Static\nt1c - Tier-1 Connected\nisr: Inter-SR')
+    print (route_table.get_string(sortby="Route Type", reversesort=True))
 
 def getSDDCEdgeCluster(proxy_url, sessiontoken):
     """ Gets the Edge Cluster ID """
