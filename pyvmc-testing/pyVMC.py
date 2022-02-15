@@ -46,6 +46,8 @@ if not exists("./config.ini"):
     print('config.ini is missing - rename config.ini.example to config.ini and populate the required values inside the file.')
     sys.exit()
 
+DEBUG_MODE = False
+
 config = configparser.ConfigParser()
 config.read("./config.ini")
 strProdURL      = config.get("vmcConfig", "strProdURL")
@@ -813,6 +815,8 @@ def newSDDCMGWRule(proxy_url, sessiontoken, display_name, source_groups, destina
     }
     response = requests.put(myURL, headers=myHeader, json=json_data)
     json_response_status_code = response.status_code
+    if json_response_status_code != 200:
+        print(response.text)
     return json_response_status_code
 
 def removeSDDCMGWRule(proxy_url, sessiontoken, rule_id):
@@ -1932,11 +1936,15 @@ def get_deployment_id(sddc, org_id, session_token):
     return deployment_id
 
 def get_group_id(group, org_id, session_token):
+    if DEBUG_MODE:
+        print(f'DEBUG: In get_group_id(), group={group}')
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/api/inventory/{}/core/deployment-groups".format(strProdURL, org_id)
     response = requests.get(myURL, headers=myHeader)
     json_response = response.json()
     group_id = json_response['content'][int(group)-1]['id']
+    if DEBUG_MODE:
+        print(f'DEBUG: json_response group_id={group_id}')
     return group_id
 
 def get_sddc_groups(org_id, session_token):
@@ -1948,11 +1956,13 @@ def get_sddc_groups(org_id, session_token):
     # print(pretty_data)
     if (json_response['empty'] == True):
         print("     No SDDC Group found\n")
-        return False
+        return None
     else:  
+        sddc_groups = []
         for i in range(json_response['total_elements']):
+            sddc_groups.append(json_response['content'])
             print(str(i+1) + ": " + json_response['content'][i]['name'] + ": " + json_response['content'][i]['id'])
-    return True
+    return sddc_groups[0]
 
 def get_group_info(group_id, resource_id, org_id, session_token):
     myHeader = {'csp-auth-token': session_token}
@@ -2410,7 +2420,14 @@ def get_nsx_info( org_id, deployment_id, session_token):
     # print(pretty_data) 
     print("    NSX private IP:   " + json_response['nsx_private_ip'])
     for i in range (len(json_response['nsx_users'])):
-        print("    NSX User : " + json_response['nsx_users'][i]['user_name'] + " - Password: " + json_response['nsx_users'][i]['password'])
+        # Catch 'None' usernames and passwords in SDDCs prior to M15, convert to string so it displays properly
+        username = json_response['nsx_users'][i]['user_name']
+        if username is None:
+            username = "None"
+        password = json_response['nsx_users'][i]['password']
+        if password is None:
+            password = "None"
+        print("    NSX User : " + username + " - Password: " + password)
     print("    NSX public FQDN:  " + json_response['nsx_public_fqdn'])
     print("    NSX private FQDN: " + json_response['nsx_private_fqdn'])
     print("    LOGIN URLs:")
@@ -2570,10 +2587,10 @@ def getHelp():
     print("\tshow-org-users: show the list of organization users")
     print("\nVirtual Machine Networking")
     print("\tshow-network: show your current networks")
-    print("\tnew-network [NAME] [DISCONNECTED] [GATEWAY_ADDRESS]  for a disconnected network")
-    print("\tnew-network [NAME] [EXTENDED] [GATEWAY_ADDRESS] [TUNNEL_ID] for an extended network")
-    print("\tnew-network [NAME] [ROUTED] [GATEWAY_ADDRESS] [DHCP_RANGE] [DOMAIN_NAME] for a DHCP network")
-    print("\tnew-network [NAME] [ROUTED] [GATEWAY_ADDRESS] for a static network")
+    print("\tnew-network [NAME] DISCONNECTED [GATEWAY_ADDRESS] for a disconnected network")
+    print("\tnew-network [NAME] EXTENDED [GATEWAY_ADDRESS] [TUNNEL_ID] for an extended network")
+    print("\tnew-network [NAME] ROUTED [GATEWAY_ADDRESS] [DHCP_RANGE] [DOMAIN_NAME] for a DHCP network")
+    print("\tnew-network [NAME] ROUTED [GATEWAY_ADDRESS] for a static network")
     print("\tremove-network: remove a network")
     print("\nVPN")
     print("\tnew-l2vpn [NAME] [LOCAL_ENDPOINT] [REMOTE_PEER]: create a new L2VPN")
@@ -2591,30 +2608,30 @@ def getHelp():
     print("\tshow-vpn-ipsec-endpoints: show the VPN IPSec endpoints")
     print("\nVTC")
     print("\tSDDC-Group Operations:")
-    print("\t    create-sddc-group [name]")
-    print("\t    delete-sddc-group")
-    print("\t    get-group-info\n")
+    print("\t    create-sddc-group [name]: Create an SDDC group")
+    print("\t    delete-sddc-group: Delete an SDDC group")
+    print("\t    get-group-info: Display details for an SDDC group\n")
     print("\tSDDC Operations:")
-    print("\t    get-sddc-info")
-    print("\t    get-nsx-info")
-    print("\t    attach-sddc")
-    print("\t    detach-sddc \n")
+    print("\t    get-sddc-info: Display a list of all SDDCs")
+    print("\t    get-nsx-info: Display NSX credentials and URLs")
+    print("\t    attach-sddc: Attach an SDDC to a vTGW")
+    print("\t    detach-sddc: Detach an SDDC from a vTGW\n")
     print("\tAWS Operations:")
-    print("\t    connect-aws")
-    print("\t    disconnect-aws\n")
+    print("\t    connect-aws: Connect an vTGW to an AWS account")
+    print("\t    disconnect-aws: Disconnect a vTGW from an AWS account\n")
     print("\tVPC Operations:")
-    print("\t    attach-vpc")
-    print("\t    detach-vpc")
-    print("\t    vpc-prefixes\n")
+    print("\t    attach-vpc: Attach a VPC to a vTGW")
+    print("\t    detach-vpc Detach VPC from a vTGW")
+    print("\t    vpc-prefixes: Add or remove vTGW static routes\n")
     print("\tDXGW Operations:")
-    print("\t    attach-dxgw")
-    print("\t    detach-dxgw\n")
+    print("\t    attach-dxgw: Attach a Direct Connect Gateway to a vTGW")
+    print("\t    detach-dxgw: Detach a Direct Connect Gateway from a vTGW\n")
     print("\tTGW Operations:")
-    print("\t    show-routes")
+    print("\t    show-tgw-routes: Show the vTGW route table")
     print("\nTKG")
     # print("\tget-tkg-info")
-    print("\tenable-tkg")
-    print("\tdisable-tkg")
+    print("\tenable-tkg: Enable Tanzu Kubernetes Grid on an SDDC")
+    print("\tdisable-tkg: Disable Tanzu Kubernetes Grid on an SDDC")
     print("\n")
 
 
@@ -3048,7 +3065,8 @@ elif intent_name == "new-mgw-rule":
     if sg_string.lower() == "any":
         source_groups = ["ANY"]
     else:
-        sg_string = sg_string.upper()
+        # Commented out 2022-01-03 - unclear why the upper() function is used here, but it breaks for any rule with a group that is in lowercase.
+        #sg_string = sg_string.upper()
         sg_list = sg_string.split(",")
         source_groups= [group_index + x for x in sg_list]
     
@@ -3058,7 +3076,8 @@ elif intent_name == "new-mgw-rule":
     if dg_string.lower() == "any":
         destination_groups = ["ANY"]
     else:
-        dg_string = dg_string.upper()
+        # Commented out 2022-01-03 - unclear why the upper() function is used here, but it breaks for any rule with a group that is in lowercase.
+        #dg_string = dg_string.upper()
         dg_list = dg_string.split(",")
         destination_groups= [group_index + x for x in dg_list]
 
@@ -3388,7 +3407,6 @@ elif intent_name == "create-sddc-group":
 
 elif intent_name == "delete-sddc-group":
     print("=====Deleting SDDC Group=========")
-    get_sddc_groups( ORG_ID, session_token)
     group = input('   Select SDDC Group: ')
     group_id = get_group_id(group, ORG_ID, session_token)
     if (check_empty_group(group_id, ORG_ID, session_token)):
@@ -3522,13 +3540,36 @@ elif intent_name == "detach-dxgw":
     task_id = detach_dxgw(resource_id, ORG_ID, dxgw_id, session_token)   
     get_task_status(task_id, ORG_ID, session_token)
 
-elif intent_name == "show-routes":
+elif intent_name == "show-tgw-routes":
     print("===== Show TGW route tables =========")
-    get_sddc_groups( ORG_ID, session_token)
-    group = input('   Select SDDC Group: ')
-    group_id = get_group_id(group, ORG_ID, session_token)  
-    resource_id = get_resource_id(group_id, ORG_ID, session_token)
-    get_route_tables(resource_id, ORG_ID, session_token)   
+    #get_sddc_groups( ORG_ID, session_token)
+    sddc_groups = get_sddc_groups( ORG_ID, session_token)
+    group_id = None
+    if DEBUG_MODE:
+        print(f'DEBUG: sddc_groups = {sddc_groups}')
+    if len(sys.argv) > 2:
+        search_name = sys.argv[2]
+        for grp in sddc_groups:
+            if grp['name'] == search_name:
+                group_id = grp['id']
+                group_name = search_name
+                if DEBUG_MODE:
+                    print(f'DEBUG: Found {search_name} with group ID {group_id}')
+                break
+    else:
+        group = input('   Select SDDC Group: ')
+        group_id = sddc_groups[int(group) -1]['id']
+        group_name = sddc_groups[int(group) -1]['name']
+        if DEBUG_MODE:
+            print(f'DEBUG: User input group = {group}')
+            print(f'DEBUG: group_id from sddc_groups = {group_id}')
+    #group_id = get_group_id(group, ORG_ID, session_token)  
+    if group_id is None:
+        print('Could not retrieve group ID')
+    else:
+        resource_id = get_resource_id(group_id, ORG_ID, session_token)
+        print(f'Route table for {group_name} ({group_id})')
+        get_route_tables(resource_id, ORG_ID, session_token)   
 
 elif intent_name == "get-nsx-info":
     print("===== get deployments =========")
