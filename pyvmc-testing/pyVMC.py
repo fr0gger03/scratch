@@ -42,6 +42,9 @@ from deepdiff import DeepDiff
 from os.path import exists
 from prettytable import PrettyTable
 
+from pyvmc_network_api import *
+from pyvmc_network_output import *
+
 if not exists("./config.ini"):
     print('config.ini is missing - rename config.ini.example to config.ini and populate the required values inside the file.')
     sys.exit()
@@ -1535,52 +1538,6 @@ def getCSPGroupMembers(csp_url, session_token):
 
     print(table)
 
-def getSDDCT0PrefixLists(csp_url, session_token):
-    myHeader = {'csp-auth-token': session_token}
-    myURL = f'{csp_url}/policy/api/v1/infra/tier-0s/vmc/prefix-lists'
-    response = requests.get(myURL, headers=myHeader)
-    if response.status_code == 200:
-        json_response = response.json()
-        prefixlists = json_response['results']
-        # clear results for any prefix lists found that contain "System created prefix list"
-        # this will return empty dictionaries for any containing the above string
-        for prefix in prefixlists:
-            if prefix['description'].__contains__('System created prefix list'):
-                prefix.clear()
-        # remove empty dictionaries
-        while {} in prefixlists:
-            prefixlists.remove({})
-        # print a nicely formatted list of only user-uploaded prefix lists; system created lists were eliminated in above code
-        if len(prefixlists) != 0: 
-            for prefixlist in prefixlists:
-                prefixlisttable = PrettyTable(['ID','Display Name','Description'])
-                prefixlisttable.add_row([prefixlist["id"],prefixlist["display_name"],prefixlist["description"]])
-                print("PREFIX:")
-                print(prefixlisttable)
-                prefixtable = PrettyTable(['Sequence','Network','Comparison', 'Action'])
-                i = 0
-                if prefixlist.get('prefixes'): 
-                    for prefix in prefixlist['prefixes']:
-                        i+=1
-                        if prefix.get('ge'):
-                            comparison = "ge (greater-than-or-equal)"
-                        elif prefix.get('le'):
-                            comparison = "le (less-than-or-equal)"
-                        else:
-                            comparison = '-'
-                        prefixtable.add_row([i,prefix['network'],comparison,prefix['action']])
-                    print(f'PREFIX ENTRIES FOR {prefixlist["id"]}:')
-                    print(prefixtable)
-                    print("")
-            if len(sys.argv) == 3:
-                if sys.argv[2] == "showjson":
-                    print('RAW JSON:')
-                    print(json.dumps(prefixlists,indent=2))
-        else:
-            print("No user created prefixes found.")
-    else:
-        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
-
 def newBGPprefixlist(csp_url, session_token):
     myHeader = {'Authorization': f'Bearer {session_token}', 'Content-type': 'application/json'}
 #   capture details for new prefix list
@@ -1760,20 +1717,6 @@ def getSDDCT0BGPneighbors(csp_url, session_token):
                 print(json.dumps(bgp_neighbors,indent=2))
     else:
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
-
-def getSDDCT0routes(proxy_url, session_token):
-    myHeader = {'csp-auth-token': session_token}
-    myURL = "{}/policy/api/v1/infra/tier-0s/vmc/routing-table?enforcement_point_path=/infra/sites/default/enforcement-points/vmc-enforcementpoint".format(proxy_url)
-    response = requests.get(myURL, headers=myHeader)
-    json_response = response.json()
-    t0_routes = json_response['results'][1]['route_entries']
-    route_table = PrettyTable(['Route Type', 'Network', 'Admin Distance', 'Next Hop'])
-    for routes in t0_routes:
-        route_table.add_row([routes['route_type'],routes['network'],routes['admin_distance'],routes['next_hop']])
-    print ('T0 Routes')
-    print ('Route Type Legend:')
-    print ('t0c - Tier-0 Connected\nt0s - Tier-0 Static\nb   - BGP\nt0n - Tier-0 NAT\nt1s - Tier-1 Static\nt1c - Tier-1 Connected\nisr: Inter-SR')
-    print (route_table.get_string(sort_key = operator.itemgetter(1,0), sortby = "Network", reversesort=True))
 
 def getSDDCT0BGPRoutes(csp_url, session_token):
     myHeader = {'csp-auth-token': session_token}
@@ -2510,135 +2453,11 @@ def disable_wcp( org_id, sddc_id, cluster_id, session_token):
     task_id = json_response ['id']
     return task_id
 
-def getHelp():
-    print("\nWelcome to PyVMC !")
-    print("\nHere are the currently supported commands: ")
-    print("\nAWS Account and VPC")
-    print("\tset-sddc-connected-services: change whether to use S3 over the Internet or via the ENI")
-    print("\tshow-compatible-subnets [LINKEDACCOUNTID] [REGION]: show compatible native AWS subnets connected to the SDDC")
-    print("\tshow-connected-accounts: show native AWS accounts connected to the SDDC")
-    print("\tshow-sddc-connected-vpc: show the VPC connected to the SDDC")
-    print("\tshow-shadow-account: show the Shadow AWS Account VMC is deployed in")
-    print("\nBGP and Networking")
-    print("\tattach-t0-prefix-list [BGP NEIGHBOR ID]: attach a BGP Prefix List to a T0 BGP neighbor")
-    print("\tdetach-t0-prefix-lists [BGP NEIGHBOR ID]: detach all prefix lists from specified neighbor")
-    print("\tnew-t0-prefix-list: create a new T0 BGP Prefix List")
-    print("\tremove-t0-prefix-list [PREFIX LIST ID]: you can see current prefix list with 'show-t0-prefix-lists': remove a T0 BGP Prefix List")
-    print("\tset-bgp-as [ASN]: update the BGP AS number")
-    print("\tset-mtu: set the MTU configured over the Direct Connect")
-    print("\tshow-mtu: show the MTU configured over the Direct Connect")
-    print("\tshow-egress-interface-counters: show current Internet interface egress counters")
-    print("\tshow-sddc-bgp-as: show the BGP AS number")
-    print("\tshow-sddc-bgp-vpn: show whether DX is preferred over VPN")
-    print("\tshow-t0-bgp-neighbors: show T0 BGP neighbors")
-    print("\tshow-t0-bgp-routes: show all learned and advertised routes through BGP")
-    print("\tshow-t0-prefix-lists: show T0 prefix lists")
-    print("\tshow-t0-routes: show routes at the T0 router")
-    print("\nDNS ")
-    print("\tshow-dns-services: show DNS services")
-    print("\tshow-dns-zones: show DNS zones")
-    print("\nInventory Groups")
-    print("\tnew-group [CGW/MGW] [Group_ID]: create a new group")
-    print("\tremove-group [CGW/MGW][Group_ID]: remove a group")
-    print("\tshow-group [CGW/MGW] [Group_ID]: show existing groups")
-    print("\tshow-group-association [CGW/MGW] [Group_ID]: show security rules used by a groups")
-    print("\nFirewall - Distributed")
-    print("\tnew-dfw-rule [NAME] [SOURCE-GROUPS] [DESTINATION-GROUPS] [SERVICE] [ACTION] [SECTION] [SEQUENCE-NUMBER]: create a new DFW security rule")
-    print("\tnew-dfw-section [NAME][CATEGORY]: create a new DFW section")
-    print("\tremove-dfw-rule [SECTION_ID][RULE_ID]: delete a DFW rule")
-    print("\tremove-dfw-section [RULE_ID]: delete a DFW section")
-    print("\tshow-dfw-section: show the DFW sections")
-    print("\tshow-dfw-section-rules [SECTION]: show the DFW security rules within a section")
-    print("\nFirewall - T0")
-    print("\tnew-cgw-rule [NAME] [SOURCE-GROUPS] [DESTINATION-GROUPS] [SERVICE] [ACTION] [SCOPE] [SEQUENCE-NUMBER]: create a new CGW security rule")
-    print("\tnew-mgw-rule [NAME] [SOURCE-GROUPS] [DESTINATION-GROUPS] [SERVICE] [ACTION] [SEQUENCE-NUMBER]: create a new MGW security rule")
-    print("\tremove-cgw-rule [RULE_ID]: delete a CGW security rule")
-    print("\tremove-mgw-rule [RULE_ID]: delete a MGW security rule")
-    print("\tshow-cgw-rule: show the CGW security rules")
-    print("\tshow-mgw-rule: show the MGW security rules")
-    print("\nFirewall Services")
-    print("\tnew-service: create a new service")
-    print("\tremove-service [SERVICE-ID]: remove a service")
-    print("\tshow-services [SERVICE-ID]: show a specific service")
-    print("\tshow-services: show services")
-    print("\nNAT")
-    print("\tnew-nat-rule: To create a new NAT rule")
-    print("\tremove-nat-rule: remove a NAT rule")
-    print("\tshow-nat: show the configured NAT rules")
-    print("\tshow-nat [NAT-RULE-ID] for statistics of a rule: show the statistics for a specific NAT rule")
-    print("\nPublic IP addressing")
-    print("\tnew-sddc-public-ip: request a new public IP")
-    print("\tremove-sddc-public-ip: remove an existing public IP")
-    print("\tset-sddc-public-ip: update the description of an existing public IP")
-    print("\tshow-sddc-public-ip: show the public IPs")
-    print("\nSDDC")
-    print("\tget-access-token: show your access token")  
-    print("\tshow-sddc-state: get a view of your selected SDDC")
-    print("\tshow-sddcs: display a lit of your SDDCs")
-    print("\tshow-vms: get a list of your VMs")
-    print("\nUser and Group management")
-    print("\tadd-users-to-csp-group [GROUP_ID] [EMAILS]: CSP user to a group")
-    print("\tshow-csp-group-diff [GROUP_ID] [showall|skipmembers|skipowners]: this compares the roles in the specified group with every user in the org and prints out a user-by-user diff")
-    print("\tshow-csp-group-members [GROUP_ID]: show CSP group members")
-    print("\tshow-csp-groups: To show CSP groups")
-    print("\tshow-csp-org-users [email]: show a CSP user")
-    print("\tshow-csp-service-roles: show CSP service roles for the currently logged in user")
-    print("\tfind-csp-user-by-service-role [service role name]: search for CSP users with a specific service role")
-    print("\tshow-org-users: show the list of organization users")
-    print("\nVirtual Machine Networking")
-    print("\tshow-network: show your current networks")
-    print("\tnew-network [NAME] DISCONNECTED [GATEWAY_ADDRESS] for a disconnected network")
-    print("\tnew-network [NAME] EXTENDED [GATEWAY_ADDRESS] [TUNNEL_ID] for an extended network")
-    print("\tnew-network [NAME] ROUTED [GATEWAY_ADDRESS] [DHCP_RANGE] [DOMAIN_NAME] for a DHCP network")
-    print("\tnew-network [NAME] ROUTED [GATEWAY_ADDRESS] for a static network")
-    print("\tremove-network: remove a network")
-    print("\nVPN")
-    print("\tnew-l2vpn [NAME] [LOCAL_ENDPOINT] [REMOTE_PEER]: create a new L2VPN")
-    print("\tremove-l2VPN [ID]: remove a L2VPN")
-    print("\tremove-vpn [VPN-ID]: remove a VPN")
-    print("\tremove-vpn-ike-profile [ID]: remove a VPN IKE profile")
-    print("\tremove-vpn-ipsec-tunnel-profile [ID]: To remove a VPN IPSec Tunnel profile")
-    print("\tshow-l2vpn: show l2 vpn")
-    print("\tshow-l2vpn-services: show l2 vpn services")
-    print("\tshow-vpn: show the configured VPN")
-    print("\tshow-vpn [VPN_ID]: show the VPN statistics")
-    print("\tshow-vpn-ike-profile: show the VPN IKE profiles")
-    print("\tshow-vpn-internet-ip: show the public IP used for VPN services")
-    print("\tshow-vpn-ipsec-tunnel-profile: show the VPN tunnel profile")
-    print("\tshow-vpn-ipsec-endpoints: show the VPN IPSec endpoints")
-    print("\nVTC")
-    print("\tSDDC-Group Operations:")
-    print("\t    create-sddc-group [name]: Create an SDDC group")
-    print("\t    delete-sddc-group: Delete an SDDC group")
-    print("\t    get-group-info: Display details for an SDDC group\n")
-    print("\tSDDC Operations:")
-    print("\t    get-sddc-info: Display a list of all SDDCs")
-    print("\t    get-nsx-info: Display NSX credentials and URLs")
-    print("\t    attach-sddc: Attach an SDDC to a vTGW")
-    print("\t    detach-sddc: Detach an SDDC from a vTGW\n")
-    print("\tAWS Operations:")
-    print("\t    connect-aws: Connect an vTGW to an AWS account")
-    print("\t    disconnect-aws: Disconnect a vTGW from an AWS account\n")
-    print("\tVPC Operations:")
-    print("\t    attach-vpc: Attach a VPC to a vTGW")
-    print("\t    detach-vpc Detach VPC from a vTGW")
-    print("\t    vpc-prefixes: Add or remove vTGW static routes\n")
-    print("\tDXGW Operations:")
-    print("\t    attach-dxgw: Attach a Direct Connect Gateway to a vTGW")
-    print("\t    detach-dxgw: Detach a Direct Connect Gateway from a vTGW\n")
-    print("\tTGW Operations:")
-    print("\t    show-tgw-routes: Show the vTGW route table")
-    print("\nTKG")
-    # print("\tget-tkg-info")
-    print("\tenable-tkg: Enable Tanzu Kubernetes Grid on an SDDC")
-    print("\tdisable-tkg: Disable Tanzu Kubernetes Grid on an SDDC")
-    print("\n")
-
 
 # --------------------------------------------
 # ---------------- Main ----------------------
 # --------------------------------------------
-
+from pyvmc_help import getHelp
 if len(sys.argv) > 1:
     intent_name = sys.argv[1].lower()
 else:
@@ -2664,8 +2483,11 @@ elif intent_name == "show-csp-service-roles":
     getCSPServiceRoles(strCSPProdURL,session_token)
 elif intent_name == "find-csp-user-by-service-role":
     findCSPUserByServiceRole(strCSPProdURL,session_token)
+
 elif intent_name == "show-t0-routes":
-    getSDDCT0routes(proxy,session_token)
+    t0_routes=getSDDCT0routes(proxy,session_token)
+    showt0routes(t0_routes)
+
 elif intent_name == "show-t0-bgp-neighbors":
     getSDDCT0BGPneighbors(proxy, session_token)
 elif intent_name == "show-t0-bgp-routes":
@@ -2681,8 +2503,11 @@ elif intent_name == "detach-t0-prefix-lists":
 elif intent_name == "remove-t0-prefix-list":
     prefix_list_id = sys.argv[2]
     removeBPGprefixlist(proxy, session_token, prefix_list_id)
+
 elif intent_name == "show-t0-prefix-lists":
-    getSDDCT0PrefixLists(proxy, session_token)    
+    prefixlists=getSDDCT0PrefixLists(proxy, session_token)
+    showt0prefixlists(prefixlists)
+
 elif intent_name == "show-egress-interface-counters":
     edge_cluster_id = getSDDCEdgeCluster(proxy, session_token)
     edge_path_0 = getSDDCEdgeNodes(proxy, session_token, edge_cluster_id, 0)
