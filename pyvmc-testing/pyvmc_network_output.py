@@ -9,6 +9,22 @@ from deepdiff import DeepDiff
 from os.path import exists
 from prettytable import PrettyTable
 
+def shownetwork(sddc_networks):
+    table = PrettyTable(['Name', 'id', 'Type', 'Network', 'Default Gateway'])
+    table_extended = PrettyTable(['Name', 'id','Tunnel ID'])
+    for i in sddc_networks:
+        if ( i['type'] == "EXTENDED"):
+            table_extended.add_row([i['display_name'], i['id'], i['l2_extension']['tunnel_id']])
+        elif ( i['type'] == "DISCONNECTED"):
+            table.add_row([i['display_name'], i['id'], i['type'],"-", "-"])
+        else: 
+            table.add_row([i['display_name'], i['id'], i['type'], i['subnets'][0]['network'], i['subnets'][0]['gateway_address']])
+    print("Routed Networks:")
+    print(table)
+    print("Extended Networks:")
+    print(table_extended)
+
+
 def showt0routes(t0_routes):
     route_table = PrettyTable(['Route Type', 'Network', 'Admin Distance', 'Next Hop'])
     for routes in t0_routes:

@@ -218,35 +218,6 @@ def getSDDCState(org_id, sddc_id, sessiontoken):
     table.add_row([sddc_state['name'], sddc_state['id'], sddc_state['sddc_state'], sddc_state['sddc_type'], sddc_state['resource_config']['region'], sddc_state['resource_config']['deployment_type']])
     return table
 
-def getNSXTproxy(org_id, sddc_id, sessiontoken):
-    """ Gets the Reverse Proxy URL """
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = "{}/vmc/api/orgs/{}/sddcs/{}".format(strProdURL, org_id, sddc_id)
-    response = requests.get(myURL, headers=myHeader)
-    json_response = response.json()
-    proxy_url = json_response['resource_config']['nsx_api_public_endpoint_url']
-    return proxy_url
-
-def getSDDCnetworks(proxy_url, sessiontoken):
-    """ Gets the SDDC Networks """
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/tier-1s/cgw/segments")
-    response = requests.get(myURL, headers=myHeader)
-    json_response = response.json()
-    sddc_networks = json_response['results']
-    table = PrettyTable(['Name', 'id', 'Type', 'Network', 'Default Gateway'])
-    table_extended = PrettyTable(['Name', 'id','Tunnel ID'])
-    for i in sddc_networks:
-        if ( i['type'] == "EXTENDED"):
-            table_extended.add_row([i['display_name'], i['id'], i['l2_extension']['tunnel_id']])
-        elif ( i['type'] == "DISCONNECTED"):
-            table.add_row([i['display_name'], i['id'], i['type'],"-", "-"])
-        else: 
-            table.add_row([i['display_name'], i['id'], i['type'], i['subnets'][0]['network'], i['subnets'][0]['gateway_address']])
-    print("Routed Networks:")
-    print(table)
-    print("Extended Networks:")
-    print(table_extended)
 
 def newSDDCnetworks(proxy_url, sessiontoken, display_name, gateway_address, dhcp_range, domain_name, routing_type):
     """ Creates a new SDDC Network. L2 VPN networks are not currently supported. """
@@ -2604,7 +2575,9 @@ elif intent_name == "remove-l2vpn":
     id = sys.argv[2]
     print(removeSDDCL2VPN(proxy, session_token,id))
 elif intent_name == "show-network":
-    getSDDCnetworks(proxy, session_token)
+    sddc_networks=getSDDCnetworks(proxy, session_token)
+    shownetwork(sddc_networks)
+
 elif intent_name == "new-network":
     if sys.argv[3].lower() == "routed" and len(sys.argv) == 7:
         # DHCP-Enabled Network
