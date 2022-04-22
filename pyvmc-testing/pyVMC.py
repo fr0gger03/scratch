@@ -3200,7 +3200,6 @@ elif intent_name == "show-t0-static-routes":
     getSDDCT0staticroutes(proxy,session_token)
 
 
-
 # ============================
 # NSX-T - DNS
 # ============================
