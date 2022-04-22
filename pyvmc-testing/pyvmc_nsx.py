@@ -1,3 +1,4 @@
+import sys
 import json
 from weakref import proxy
 import requests
@@ -118,10 +119,65 @@ def attach_bgp_prefix_list_json(proxy, session_token, neighbor_id, neighbor_json
         print(json_response['error_message'])
 
 
-def get_sddc_bgp_as(proxy_url,sessiontoken):
+def get_sddc_bgp_as_json(proxy_url,sessiontoken):
     """Retrieves BGP Autonomous System Number from DX interface"""
     myHeader = {'csp-auth-token': sessiontoken}
     myURL = (proxy_url + "/cloud-service/api/v1/infra/direct-connect/bgp")
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
+def get_sddc_edge_cluster_json(proxy_url, sessiontoken):
+    """ Gets the Edge Cluster ID """
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = (proxy_url + "/policy/api/v1/infra/sites/default/enforcement-points/vmc-enforcementpoint/edge-clusters")
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
+def get_sddc_edge_nodes_json(proxy_url, sessiontoken, edge_cluster_id):
+    """ Gets the Edge Nodes Path """
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = proxy_url + "/policy/api/v1/infra/sites/default/enforcement-points/vmc-enforcementpoint/edge-clusters/" + edge_cluster_id + "/edge-nodes"
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
+def get_sddc_internet_stats_json(proxy_url, sessiontoken, edge_path):
+    ### Displays counters for egress interface ###
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = (proxy_url + "/policy/api/v1/infra/tier-0s/vmc/locale-services/default/interfaces/public-0/statistics?edge_path=" + edge_path + "&enforcement_point_path=/infra/sites/default/enforcement-points/vmc-enforcementpoint")
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
+def get_sddc_mtu_json(proxy_url,sessiontoken):
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = (proxy_url + "/cloud-service/api/v1/infra/external/config")
     response = requests.get(myURL, headers=myHeader)
     json_response = response.json()
     if response.status_code == 200:
@@ -160,7 +216,7 @@ def get_sddc_t0_bgp_neighbors_json(proxy, session_token):
         print(json_response['error_message'])
 
 
-def detach_sddc_t0_prefix_lists(proxy, session_token, neighbor_id, neighbor_json):
+def detach_sddc_t0_prefix_lists_json(proxy, session_token, neighbor_id, neighbor_json):
     """Detaches BGP prefix lists from SDDC T0 - applicable to route-based VPN"""
     myHeader = {'csp-auth-token': session_token}
     myURL = f'{proxy}/policy/api/v1/infra/tier-0s/vmc/locale-services/default/bgp/neighbors/' + neighbor_id
@@ -176,6 +232,20 @@ def get_sddc_t0_bgp_single_neighbor_json(proxy, session_token, neighbor_id):
     """Retrives JSON payload describing a single BGP neighbor - applicable to route-based VPN"""
     myHeader = {'csp-auth-token': session_token}
     myURL = f'{proxy}/policy/api/v1/infra/tier-0s/vmc/locale-services/default/bgp/neighbors/' + neighbor_id
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
+def get_sddc_bgp_vpn_json(proxy_url, sessiontoken):
+    """Retreives preferred path - VPN or DX."""
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = (proxy_url + "/cloud-service/api/v1/infra/direct-connect/bgp")
     response = requests.get(myURL, headers=myHeader)
     json_response = response.json()
     if response.status_code == 200:
@@ -228,6 +298,20 @@ def get_sddc_t0_routes_json(proxy, session_token):
         print(json_response['error_message'])
 
 
+def get_sddc_t0_static_routes_json(proxy_url, session_token):
+    """Retrieves static routes for SDDC"""
+    myHeader = {'csp-auth-token': session_token}
+    myURL = f'{proxy_url}/policy/api/v1/infra/tier-0s/vmc/static-routes'
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
 def new_bgp_prefix_list_json(proxy, session_token, prefix_list_id, prefix_list):
     """Creates a new BGP prefix lists for T0 edge gateway - applicable for route based VPN"""
     myHeader = {'csp-auth-token': session_token}
@@ -248,7 +332,7 @@ def remove_bgp_prefix_list_json(proxy, session_token, prefix_list_id):
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
 
-def set_sddc_bgp_as(proxy,session_token,json_data):
+def set_sddc_bgp_as_json(proxy,session_token,json_data):
     """Set BGP ASN for DX Interface"""
     myHeader = {'csp-auth-token': session_token}
     proxy_url_short = proxy.rstrip("sks-nsxt-manager")
@@ -260,9 +344,49 @@ def set_sddc_bgp_as(proxy,session_token,json_data):
         print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
 
+def set_sddc_mtu_json(proxy_url,sessiontoken,json_data):
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = (proxy_url + "/cloud-service/api/v1/infra/external/config")
+    response = requests.put(myURL, headers=myHeader, json=json_data)
+    if response.status_code != 200:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+
+
 # ============================
 # DNS
 # ============================
+
+def get_sddc_dns_services_json(proxy_url,sessiontoken,gw):
+    """ Gets the DNS Services. Use 'mgw' or 'cgw' as the parameter """
+    myHeader = {'csp-auth-token': sessiontoken}
+    proxy_url_short = proxy_url.rstrip("sks-nsxt-manager")
+    # removing 'sks-nsxt-manager' from proxy url to get correct URL
+    myURL = proxy_url_short + "policy/api/v1/infra/tier-1s/" + gw + "/dns-forwarder"
+    response = requests.get(myURL, headers=myHeader)
+    sddc_dns_service = response.json()
+    if response.status_code == 200:
+        return sddc_dns_service
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(sddc_dns_service['error_message'])
+
+
+def get_sddc_dns_zones_json(proxy_url,sessiontoken):
+    """ Retreives the SDDC DNS zone configurations."""
+    myHeader = {'csp-auth-token': sessiontoken}
+    proxy_url_short = proxy_url.rstrip("sks-nsxt-manager")
+    # removing 'sks-nsxt-manager' from proxy url to get correct URL
+    myURL = proxy_url_short + "policy/api/v1/infra/dns-forwarder-zones"
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
 
 
 # ============================
@@ -340,8 +464,36 @@ def get_cgw_segments_json(proxy_url, sessiontoken):
     myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/cgw/segments'
     response = requests.get(myURL, headers=myHeader)
     json_response = response.json()
-    return json_response
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
 
+
+def new_sddc_networks_json(proxy_url, sessiontoken, display_name, json_data):
+    """ Creates a new SDDC Network. L2 VPN networks are not currently supported. """
+    myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
+    myURL = (proxy_url + "/policy/api/v1/infra/tier-1s/cgw/segments/" + display_name)
+    response = requests.put(myURL, headers=myHeader, json=json_data)
+    json_response = response.json()
+    if response.status_code == 200:
+        return
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        sys.exit(json_response['error_message'])
+
+
+def remove_sddc_networks_json(proxy_url, sessiontoken, network_id):
+    """ Remove an SDDC Network """
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/cgw/segments/{network_id}'
+    response = requests.delete(myURL, headers=myHeader)
+    if response.status_code != 200:
+        print("There was an error. Check the syntax.")
+        sys.exit(f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
 # ============================
 # VPN
