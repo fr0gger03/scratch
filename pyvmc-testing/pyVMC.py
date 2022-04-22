@@ -1485,13 +1485,13 @@ def attachT0BGPprefixlist(csp_url, session_token, neighbor_id):
             prefix_list_id = input('Please enter the prefix list ID exactly ')
             neighbor_json['route_filtering'][0]["in_route_filters"] = ['/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id]
             print()
-            print("Prefix list " + prefix_list_id + " has been added to in_route_filters in JSON for neighbor id " + neighbor_id + ". Don't forget to review and commit.")
+            print(f'Prefix list {prefix_list_id} has been added to in_route_filters in JSON for neighbor id {neighbor_id}. Please review and commit.')
             print()
         elif test =="3":
             prefix_list_id = input('Please enter the prefix list ID exactly ')
             neighbor_json['route_filtering'][0]["out_route_filters"] = ['/infra/tier-0s/vmc/prefix-lists/' + prefix_list_id]
             print()
-            print("Prefix list " + prefix_list_id + " has been added to out_route_filters in JSON for neighbor id " + neighbor_id + ". Don't forget to review and commit.")
+            print(f'Prefix list {prefix_list_id} has been added to out_route_filters in JSON for neighbor id {neighbor_id}. Please review and commit.')
             print()
         elif test =="4":
             if neighbor_json.get("in_route_filters"):
@@ -1520,7 +1520,7 @@ def detachT0BGPprefixlists(csp_url, session_token, neighbor_id):
             del neighbor_json[key]
     neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4'}]
     detach_sddc_t0_prefix_lists_json(csp_url, session_token, neighbor_id, neighbor_json)
-    print("Prefix lists detached from " + neighbor_id)
+    print(f'Prefix lists detached from {neighbor_id}')
 
 
 def newBGPprefixlist(csp_url, session_token):
@@ -1579,8 +1579,8 @@ def newBGPprefixlist(csp_url, session_token):
 
 def getSDDCBGPAS(proxy_url,sessiontoken):
     json_response = get_sddc_bgp_as_json(proxy_url,sessiontoken)
-    SDDC_BGP_AS = json_response['local_as_num']
-    print(f'The SDDC BGP Autonomous System is ASN {SDDC_BGP_AS}')
+    sddc_bgp_as = json_response['local_as_num']
+    print(f'The SDDC BGP Autonomous System is ASN {sddc_bgp_as}')
 
 
 def setSDDCBGPAS(proxy_url,sessiontoken,asn):
@@ -1631,8 +1631,8 @@ def getSDDCInternetStats(proxy_url, sessiontoken, edge_path):
 def getSDDCBGPVPN(proxy_url, sessiontoken):
     """Retreives preferred path - VPN or DX."""
     json_response = get_sddc_bgp_vpn_json(proxy_url, sessiontoken)
-    SDDC_BGP_VPN = json_response['route_preference']
-    if SDDC_BGP_VPN == "VPN_PREFERRED_OVER_DIRECT_CONNECT":
+    sddc_bgp_vpn = json_response['route_preference']
+    if sddc_bgp_vpn == "VPN_PREFERRED_OVER_DIRECT_CONNECT":
         return "The preferred path is over VPN, with Direct Connect as a back-up."
     else:
         return "The preferred path is over Direct Connect, with VPN as a back-up."
@@ -1752,7 +1752,6 @@ def getSDDCT0staticroutes(proxy_url,session_token):
     """Prints static routes configured on T0 edge gateway"""
     t0_static_routes_json = get_sddc_t0_static_routes_json(proxy_url, session_token)
     t0_static_routes = t0_static_routes_json['results']
-    # print(json.dumps(t0_static_routes, indent = 2))
     route_table = PrettyTable(['Display Name', 'Network', 'Admin Distance', 'Next Hop'])
     for routes in t0_static_routes:
         route_table.add_row([routes['display_name'],routes['network'],routes['next_hops'][0]['admin_distance'],routes['next_hops'][0]['ip_address']])
@@ -2388,7 +2387,7 @@ def newSDDCStretchednetworks(proxy_url, sessiontoken, display_name, tunnel_id, l
 def removeSDDCNetworks(proxy_url, sessiontoken, network_id):
     """ Remove an SDDC Network """
     remove_sddc_networks_json(proxy_url, sessiontoken, network_id)
-    print("The network " + network_id + " has been deleted")
+    print(f'The network {network_id} has been deleted.')
 
 
 def getSDDCnetworks(proxy_url, sessiontoken):
