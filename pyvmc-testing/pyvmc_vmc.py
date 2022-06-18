@@ -377,7 +377,7 @@ def delete_sddc_group_json(strProdURL, resource_id, org_id, session_token):
 def get_group_info_json(strProdURL, group_id, resource_id, org_id, session_token):
     """Display details for an SDDC group"""
     myHeader = {'csp-auth-token': session_token}
-    myURL = "{}/api/inventory/{}/core/deployment-groups/{}".format(strProdURL, org_id, group_id)
+    myURL = "{}/api/inventory/{}/core/deployment-groups/{}".format(strProdURL, org_id, resource_id, group_id)
     response = requests.get(myURL, headers=myHeader)
     json_response = response.json()
     if response.status_code == 200:
@@ -390,61 +390,58 @@ def get_group_info_json(strProdURL, group_id, resource_id, org_id, session_token
 # ============================
 # VTC - TGW Operations
 # ============================
-# def get_route_tables_json
-#     """Show the vTGW route table"""
-#     myHeader = {'csp-auth-token': sessiontoken}
-#     myURL = f"{strProdURL}/vmc/api/orgs/{orgID}/account-link/compatible-subnets"
-#     params = {'org': orgID, 'linkedAccountId': linkedAWSID,'region': region}
-#     response = requests.get(myURL, headers=myHeader, params=params)
-#     json_response = response.json()
-#     if response.status_code == 200:
-#         return json_response
-#     else:
-#         print("There was an error. Check the syntax.")
-#         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-#         print(json_response['error_message'])
+def get_route_tables_json(strProdURL, resource_id, org_id, session_token):
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/network/{}/core/network-connectivity-configs/{}/route-tables".format(strProdURL, org_id, resource_id)
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
 
 # ============================
 # VTC - VPC Operations
 # ============================
-# def attach_vpc_json
-#     """Attach a VPC to a vTGW"""
-#     myHeader = {'csp-auth-token': sessiontoken}
-#     myURL = f"{strProdURL}/vmc/api/orgs/{orgID}/account-link/compatible-subnets"
-#     params = {'org': orgID, 'linkedAccountId': linkedAWSID,'region': region}
-#     response = requests.get(myURL, headers=myHeader, params=params)
-#     json_response = response.json()
-#     if response.status_code == 200:
-#         return json_response
-#     else:
-#         print("There was an error. Check the syntax.")
-#         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-#         print(json_response['error_message'])
+def attach_vpc_json(strProdURL, session_token, json_body, org_id):
+    """Attach a VPC to a vTGW"""
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/network/{}/aws/operations".format(strProdURL, org_id)
+    response = requests.post(myURL, json=json_body, headers=myHeader)
+    json_response = response.json()
+    if not response.ok :
+        print ("    Error: " + json_response['message'])
+        task_id = 0
+    else:
+        task_id = json_response ['id']
+    return task_id
 
-# def detach_vpc_json
-#     """Detach VPC from a vTGW"""
-#     myHeader = {'csp-auth-token': sessiontoken}
-#     myURL = f"{strProdURL}/vmc/api/orgs/{orgID}/account-link/compatible-subnets"
-#     params = {'org': orgID, 'linkedAccountId': linkedAWSID,'region': region}
-#     response = requests.get(myURL, headers=myHeader, params=params)
-#     json_response = response.json()
-#     if response.status_code == 200:
-#         return json_response
-#     else:
-#         print("There was an error. Check the syntax.")
-#         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-#         print(json_response['error_message'])
+def detach_vpc_json(strProdURL, session_token, json_body, org_id):
+    """Detach a VPC from a vTGW"""
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/network/{}/aws/operations".format(strProdURL, org_id)
+    response = requests.post(myURL, json=json_body, headers=myHeader)
+    json_response = response.json()
+    if not response.ok :
+        print ("    Error: " + json_response['message'])
+        task_id = 0
+    else:
+        task_id = json_response ['id']
+    return task_id
 
-# def add_vpc_prefixes_json
-#     """Add or remove vTGW static routes"""
-#     myHeader = {'csp-auth-token': sessiontoken}
-#     myURL = f"{strProdURL}/vmc/api/orgs/{orgID}/account-link/compatible-subnets"
-#     params = {'org': orgID, 'linkedAccountId': linkedAWSID,'region': region}
-#     response = requests.get(myURL, headers=myHeader, params=params)
-#     json_response = response.json()
-#     if response.status_code == 200:
-#         return json_response
-#     else:
-#         print("There was an error. Check the syntax.")
-#         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-#         print(json_response['error_message'])
+def add_vpc_prefixes_json(strProdURL, session_token, json_body, org_id):
+    """Add or remove vTGW static routes"""
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/network/{}/aws/operations".format(strProdURL, org_id)
+    response = requests.post(myURL, json=json_body, headers=myHeader)
+    json_response = response.json()
+    # pretty_data = json.dumps(response.json(), indent=4)
+    # print(pretty_data)
+    if not response.ok :
+        print ("    Error: " + json_response['message'])
+        task_id = 0
+    else:
+        task_id = json_response ['id']
+    return task_id

@@ -14,6 +14,23 @@ from requests.auth import HTTPBasicAuth
 
 
 # ============================
+# Search
+# ============================
+def search_nsx_json(proxy, session_token, object_type):
+    """Leverages NSX Search API to return inventory via either NSX or policy API"""
+    myHeader = {'csp-auth-token': session_token}
+    myURL = f"{proxy}/policy/api/v1/search?query=resource_type:{object_type}"
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+
+# ============================
 # Advanced Firewall
 # ============================
 
@@ -59,7 +76,7 @@ def enable_nsx_ids_auto_update_json(proxy, session_token, json_data):
     myHeader = {'csp-auth-token': session_token}
     myURL = f"{proxy}/policy/api/v1/infra/settings/firewall/security/intrusion-services"
     response = requests.patch(myURL, headers=myHeader, json=json_data)
-    if response.status_code == 200:
+    if response.status_code == 202:
         return response
     else:
         print("There was an error. Check the syntax.")
@@ -71,7 +88,7 @@ def nsx_ids_update_signatures_json(proxy, session_token):
     myHeader = {'csp-auth-token': session_token}
     myURL = f"{proxy}/policy/api/v1/infra/settings/firewall/security/intrusion-services/signatures?action=update_signatures"
     response = requests.post(myURL, headers=myHeader)
-    if response.status_code == 200:
+    if response.status_code == 202:
         return response
     else:
         print("There was an error. Check the syntax.")
@@ -573,7 +590,7 @@ def get_vms_json(proxy_url, session_token):
 # ============================
 
 def connect_segment_json(proxy_url, sessiontoken, network_id, json_data):
-    """ Connects an existing, disconnected SDDC Network. L2 VPN networks are not currently supported. """
+    """ Connects or disconnects an existing SDDC Network. L2 VPN networks are not currently supported. """
     myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
     myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/cgw/segments/{network_id}'
     response = requests.patch(myURL, headers=myHeader, json=json_data)
@@ -581,10 +598,23 @@ def connect_segment_json(proxy_url, sessiontoken, network_id, json_data):
         print("There was an error. Check the syntax.")
         sys.exit(f'API call failed with status code {response.status_code}. URL: {myURL}.')
 
-def get_cgw_segments_json(proxy_url, sessiontoken):
+def get_cgws_json(proxy_url, sessiontoken):
+    """Returns JSON response with all CGW / Tier-1 gateways in the SDDC"""
+    myHeader = {'csp-auth-token': sessiontoken}
+    myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s'
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print (f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
+def get_cgw_segments_json(proxy_url, sessiontoken, cgw_id):
     """Returns JSON response with all CGW segments in the SDDC"""
     myHeader = {'csp-auth-token': sessiontoken}
-    myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/cgw/segments'
+    myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/{cgw_id}/segments'
     response = requests.get(myURL, headers=myHeader)
     json_response = response.json()
     if response.status_code == 200:
