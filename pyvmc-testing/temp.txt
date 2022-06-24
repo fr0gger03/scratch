@@ -1,0 +1,7 @@
+<bound method DataFrame.to_markdown of              connectivity_path  ... domain_name
+0       /infra/tier-1s/newcgw2  ...         NaN
+1  /infra/tier-1s/toms-new-cgw  ...         NaN
+2           /infra/tier-1s/cgw  ...   vmc.local
+3           /infra/tier-1s/cgw  ...         NaN
+
+[4 rows x 24 columns]>

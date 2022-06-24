@@ -16,11 +16,16 @@ from requests.auth import HTTPBasicAuth
 # ============================
 # Search
 # ============================
-def search_nsx_json(proxy, session_token, object_type):
+def search_nsx_json(proxy, session_token, object_type, object_id):
     """Leverages NSX Search API to return inventory via either NSX or policy API"""
     myHeader = {'csp-auth-token': session_token}
-    myURL = f"{proxy}/policy/api/v1/search?query=resource_type:{object_type}"
+    if object_id == "NULL":
+        myURL = f"{proxy}/policy/api/v1/search?query=resource_type:{object_type}"
+    else:
+        myURL = f"{proxy}/policy/api/v1/search?query=resource_type:{object_type} AND display_name:{object_id}"
+        # myURL = f"{proxy}/policy/api/v1/search?query=display_name:{object_id}"
     response = requests.get(myURL, headers=myHeader)
+    # print(response)
     json_response = response.json()
     if response.status_code == 200:
         return json_response
@@ -589,8 +594,27 @@ def get_vms_json(proxy_url, session_token):
 # Segments
 # ============================
 
+def configure_t1_json(proxy_url, sessiontoken, t1_id, json_data):
+    """ Configures a Tier1 router as 'ROUTED', 'ISOLATED', or 'NATTED'... Creates a new T1 if it doesn't already exist."""
+    myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
+    myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/{t1_id}'
+    response = requests.patch(myURL, headers=myHeader, json=json_data)
+    if response.status_code != 200:
+        print("There was an error. Check the syntax.")
+        sys.exit(f'API call failed with status code {response.status_code}. URL: {myURL}.')
+
+def delete_t1_json(proxy_url, sessiontoken, t1_id):
+    """ Deletes a Tier1 router."""
+    myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
+    myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/{t1_id}'
+    response = requests.delete(myURL, headers=myHeader)
+    if response.status_code != 200:
+        print("There was an error. Check the syntax.")
+        sys.exit(f'API call failed with status code {response.status_code}. URL: {myURL}.')
+
+
 def connect_segment_json(proxy_url, sessiontoken, network_id, json_data):
-    """ Connects or disconnects an existing SDDC Network. L2 VPN networks are not currently supported. """
+    """ Connects or disconnects an existing SDDC Network on the default CGW. L2 VPN networks are not currently supported. """
     myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
     myURL = f'{proxy_url}/policy/api/v1/infra/tier-1s/cgw/segments/{network_id}'
     response = requests.patch(myURL, headers=myHeader, json=json_data)

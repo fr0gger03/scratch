@@ -216,7 +216,7 @@ Here are the currently supported commands:
 
 ## Known Issues:
 
-1. VMware Cloud Disaster Recovery - The fling will automatically discover the Orchestrator URL for customers with only one region / orchestrator under management.  therefore, if entitled to / managing VCDR in multiple regions, you must manually set the path of the VCDR Orchestrator in the config.ini file.  
+VMware Cloud Disaster Recovery - The Fling will automatically discover the Orchestrator URL for customers with only one region / orchestrator under management. If you are entitled to VCDR in multiple regions, you must manually set the path of the VCDR Orchestrator in the config.ini file.
 
 ## Contributing
 
