@@ -34,6 +34,7 @@ With git BASH on Windows, you might need to use 'python -m pip install' instead 
 
 import requests                         # need this for Get/Post/Delete
 import configparser                     # parsing config file
+import argparse
 import operator
 import time
 import json
@@ -457,14 +458,29 @@ def validate_network( org_id, sddc_id, cluster_id, session_token):
     return task_id
 
 def enable_wcp( org_id, sddc_id, cluster_id, session_token):
-    json_response = enable_wcp_json( org_id, sddc_id, cluster_id, session_token)
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/wcp/v1/orgs/{}/deployments/{}/clusters/{}/operations/enable-wcp".format(strProdURL, org_id, sddc_id, cluster_id)
+    body = {
+        "egress_cidr": [egress_CIDR],
+        "ingress_cidr": [ingress_CIDR],
+        "namespace_cidr": [namespace_CIDR],
+        "service_cidr": service_CIDR
+    }
+    response = requests.post(myURL, json=body, headers=myHeader)
+    json_response = response.json()
     # pretty_data = json.dumps(response.json(), indent=4)
     # print(pretty_data)
     task_id = json_response ['id']
     return task_id
 
 def disable_wcp( org_id, sddc_id, cluster_id, session_token):
-    json_response = disable_wcp_json( org_id, sddc_id, cluster_id, session_token)
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/wcp/v1/orgs/{}/deployments/{}/clusters/{}/operations/disable-wcp".format(strProdURL, org_id, sddc_id, cluster_id)
+    body = {
+        # no need for a body
+    }
+    response = requests.post(myURL, json=body, headers=myHeader)
+    json_response = response.json()
     # pretty_data = json.dumps(response.json(), indent=4)
     # print(pretty_data)
     task_id = json_response ['id']
@@ -477,9 +493,7 @@ def disable_wcp( org_id, sddc_id, cluster_id, session_token):
 
 
 def connect_aws_account(account, region, resource_id, org_id, session_token):
-    response = connect_aws_account_json(account, region, resource_id, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
+    response = connect_aws_account_json(strProdURL, account, region, resource_id, org_id, session_token)
     json_response = response.json()
     if not response.ok :
         print ("    Error: " + json_response['message'])
@@ -490,10 +504,8 @@ def connect_aws_account(account, region, resource_id, org_id, session_token):
 
 
 def disconnect_aws_account(account, resource_id, org_id, session_token):
-    response = disconnect_aws_account_json(account, resource_id, org_id, session_token)
+    response = disconnect_aws_account_json(strProdURL, account, resource_id, org_id, session_token)
     json_response = response.json()
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     if not response.ok :
         print("    Error: " + json_response['message'])
         print("    Message: " + json_response['details'][0]['validation_error_message'])
@@ -509,16 +521,12 @@ def disconnect_aws_account(account, resource_id, org_id, session_token):
 
 
 def attach_dxgw(routes, resource_id, org_id, dxgw_owner, dxgw_id, region, session_token):
-    json_response = attach_dxgw_json(routes, resource_id, org_id, dxgw_owner, dxgw_id, region, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
+    json_response = attach_dxgw_json(strProdURL, routes, resource_id, org_id, dxgw_owner, dxgw_id, region, session_token)
     task_id = json_response ['id']
     return task_id
 
 def detach_dxgw(resource_id, org_id, dxgw_id, session_token):
-    json_response = detach_dxgw_json(resource_id, org_id, dxgw_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
+    json_response = detach_dxgw_json(strProdURL, resource_id, org_id, dxgw_id, session_token)
     task_id = json_response ['id']
     return task_id
 
@@ -530,8 +538,6 @@ def detach_dxgw(resource_id, org_id, dxgw_id, session_token):
 
 def attach_sddc(deployment_id, resource_id, org_id, session_token):
     response = attach_sddc_json(strProdURL, deployment_id, resource_id, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     json_response = response.json()
     if not response.ok :
         print ("    Error: " + json_response['message'])
@@ -543,8 +549,6 @@ def attach_sddc(deployment_id, resource_id, org_id, session_token):
 
 def remove_sddc(deployment_id, resource_id, org_id, session_token):
     response = remove_sddc_json(strProdURL,deployment_id, resource_id, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     json_response = response.json()
     if not response.ok :
         print ("    Error: " + json_response['message'])
@@ -556,8 +560,6 @@ def remove_sddc(deployment_id, resource_id, org_id, session_token):
 
 def get_nsx_info( org_id, deployment_id, session_token):
     json_response = get_nsx_info_json(strProdURL, org_id, deployment_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     print("    NSX private IP:   " + json_response['nsx_private_ip'])
     for i in range (len(json_response['nsx_users'])):
         # Catch 'None' usernames and passwords in SDDCs prior to M15, convert to string so it displays properly
@@ -581,8 +583,6 @@ def get_nsx_info( org_id, deployment_id, session_token):
 
 def get_deployments(org_id, session_token):
     json_response = get_deployments_json(strProdURL,org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     if (json_response['empty'] == True):
         print("\n=====No SDDC found=========")
     else:
@@ -593,19 +593,12 @@ def get_deployments(org_id, session_token):
 
 def get_deployment_id(sddc, org_id, session_token):
     json_response = get_deployment_id_json(strProdURL, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     deployment_id = json_response['content'][int(sddc)-1]['id']
     return deployment_id
 
 
 def get_resource_id(group_id, org_id, session_token):
-    myHeader = {'csp-auth-token': session_token}
-    myURL = "{}/api/network/{}/core/network-connectivity-configs/?group_id={}".format(strProdURL, org_id, group_id)
-    response = requests.get(myURL, headers=myHeader)
-    json_response = response.json()
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
+    json_response = get_resource_id_json(strProdURL, org_id, group_id, session_token)
     resource_id = json_response[0]['id']
     return resource_id
 
@@ -617,16 +610,12 @@ def get_resource_id(group_id, org_id, session_token):
 
 def create_sddc_group(name, deployment_id, org_id, session_token):
     json_response = create_sddc_group_json(strProdURL, name, deployment_id, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     task_id = json_response ['operation_id']
     return task_id
 
 
 def delete_sddc_group(resource_id, org_id, session_token):
     response = delete_sddc_group_json(strProdURL, resource_id, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     json_response = response.json()
     if not response.ok :
         print ("    Error: " + json_response['message'])
@@ -637,9 +626,9 @@ def delete_sddc_group(resource_id, org_id, session_token):
 
 
 def get_group_id(group, org_id, session_token):
-    json_response = get_group_id_json(strProdURL, group, org_id, session_token)
     if DEBUG_MODE:
         print(f'DEBUG: In get_group_id(), group={group}')
+    json_response = get_group_id_json(strProdURL, group, org_id, session_token)
     group_id = json_response['content'][int(group)-1]['id']
     if DEBUG_MODE:
         print(f'DEBUG: json_response group_id={group_id}')
@@ -648,8 +637,6 @@ def get_group_id(group, org_id, session_token):
 
 def get_sddc_groups(org_id, session_token):
     json_response = get_sddc_groups_json(strProdURL, org_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     if (json_response['empty'] == True):
         print("     No SDDC Group found\n")
         return None
@@ -663,8 +650,6 @@ def get_sddc_groups(org_id, session_token):
 
 def get_group_info(group_id, resource_id, org_id, session_token):
     json_response = get_group_info_json(strProdURL, org_id, group_id, session_token)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     print("\nORG ID      : " + json_response['org_id'])
     print("SDDC Group")
     print("==========")
@@ -672,10 +657,8 @@ def get_group_info(group_id, resource_id, org_id, session_token):
     print("    Group ID  : " + json_response['id'])
     print("    Creator   : " + json_response['creator']['user_name'])
     print("    Date/Time : " + json_response['creator']['timestamp'])
-    
+
     ext_json_response = ext_get_group_info_json(strProdURL, org_id, resource_id)
-    # pretty_data = json.dumps(response.json(), indent=4)
-    # print(pretty_data)
     print("SDDCs")
     print("=====")
     if 'AwsRealizedSddcConnectivityTrait' in ext_json_response['traits'] :
@@ -880,14 +863,9 @@ def get_route_tables(resource_id, org_id, session_token):
         external_id = json_response['content'][1]['id']
         print("     Members route domain: Routes to all SDDCs, VPCs and Direct Connect Gateways")
         mem_json_response = vtgw_route_json(strProdURL, org_id, resource_id, members_id, session_token)
-        # pretty_data = json.dumps(response.json(), indent=4)
-        # print(pretty_data)
         for i in range(len(mem_json_response['content'])):
             print("\tDestination: " + mem_json_response['content'][i]['destination'] + "\t\tTarget: " + mem_json_response['content'][i]['target']['id'])
-
         ext_json_response = vtgw_route_json(strProdURL, org_id, resource_id, external_id, session_token)
-        # pretty_data = json.dumps(response.json(), indent=4)
-        # print(pretty_data)
         print("     External (VPC and Direct Connect Gateway) route domain: Routes only to member SDDCs")
         for i in range(len(ext_json_response['content'])):
             print("\tDestination: " + ext_json_response['content'][i]['destination'] + "\t\tTarget: " + ext_json_response['content'][i]['target']['id'])
@@ -909,12 +887,8 @@ def get_task_status(task_id, org_id, session_token):
             if not new_session_token :
                 sys.stdout.write("Generating a new session_token")
                 new_session_token = getAccessToken(Refresh_Token)
-                myHeader = {'csp-auth-token': new_session_token}    #update the header with new session_token
+                session_token = new_session_token
         json_response = get_task_status_json(strProdURL,task_id, org_id, session_token)
-        # response = requests.get(myURL, headers=myHeader)
-        # json_response = response.json()
-        # # pretty_data = json.dumps(response.json(), indent=4)
-        # # print(pretty_data)
         status = json_response ['state']['name']
         if status == "FAILED":
             print("\nTask FAILED ")
@@ -928,11 +902,9 @@ def get_task_status(task_id, org_id, session_token):
     print("\nFINISHED in", '{:02}min {:02}sec'.format(int(minutes), int(seconds)))
     return
 
-
 # ============================
 # VTC - VPC Operations
 # ============================
-
 
 def attach_vpc(att_id, resource_id, org_id, account, session_token):
     json_body = {
@@ -957,23 +929,23 @@ def attach_vpc(att_id, resource_id, org_id, account, session_token):
 
 def detach_vpc(att_id, resource_id, org_id, account, session_token):
     json_body = {
-    "type": "APPLY_ATTACHMENT_ACTION",
-    "resource_id": resource_id,
-    "resource_type": "network-connectivity-config",
-    "config" : {
-            "type": "AwsApplyAttachmentActionConfig",
-            "account" : {
-                "account_number": account,
-                "attachments": [
-                    {
-                        "action": "DELETE",
-                        "attach_id": att_id
-                    }
-                ]
+        "type": "APPLY_ATTACHMENT_ACTION",
+        "resource_id": resource_id,
+        "resource_type": "network-connectivity-config",
+        "config" : {
+                "type": "AwsApplyAttachmentActionConfig",
+                "account" : {
+                    "account_number": account,
+                    "attachments": [
+                        {
+                            "action": "DELETE",
+                            "attach_id": att_id
+                        }
+                    ]
+                }
             }
         }
-    }
-    task_id = detach_vpc_json(strProdURL, session_token, json_body, org_id)
+    task_id = attach_vpc_json(strProdURL, session_token, json_body, org_id)
     return task_id
 
 def get_pending_att(resource_id, org_id, session_token):
@@ -1126,6 +1098,8 @@ def search_nsx(proxy_url, session_token, object_type, object_id):
                 item['network'] = "--"
                 item['gateway_address'] = "--"
                 item['dhcp_ranges'] = "--"
+            if 'connectivity_path' not in item:
+                item['connectivity_path'] ="--"
         if len(results) !=0:
             table = generate_table(results)
         print(table.get_string(fields=["resource_type", "display_name", "id", "type", "network", "gateway_address", "dhcp_ranges", "connectivity_path"]))
@@ -1175,7 +1149,6 @@ def search_nsx(proxy_url, session_token, object_type, object_id):
         if len(results) !=0:
             table = generate_table(results)
         print(table.get_string(fields=["resource_type", "display_name", "owner_vm_type", "owner_vm_id", "mac_address", "ip_addresses"]))
-
 
 # ============================
 # NSX-T - Advanced Firewall
@@ -1404,9 +1377,9 @@ def listIdsPolicies(proxy, session_token):
 # NSX-T - BGP and Routing
 # ============================
 
-def attachT0BGPprefixlist(csp_url, session_token, neighbor_id):
+def attachT0BGPprefixlist(proxy, session_token, neighbor_id):
     """Attaches identified prefix list to T0 edge gateway - applicable for route-based VPN"""
-    neighbor_json = get_sddc_t0_bgp_single_neighbor_json(csp_url, session_token, neighbor_id)
+    neighbor_json = get_sddc_t0_bgp_single_neighbor_json(proxy, session_token, neighbor_id)
     for key in list(neighbor_json.keys()):
         if key.startswith('_'):
             del neighbor_json[key]
@@ -1446,8 +1419,8 @@ def attachT0BGPprefixlist(csp_url, session_token, neighbor_id):
                 del neighbor_json["out_route_filters"]
             neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4'}]
         elif test == "5":
-            attach_bgp_prefix_list_json(csp_url, session_token, neighbor_id, neighbor_json)
-            print("Complete - route filter entry:")
+            status_code = attach_bgp_prefix_list_json(proxy, session_token, neighbor_id, neighbor_json)
+            print(f'Status {status_code}. Complete - route filter entry:')
             print()
             pretty_json = json.dumps(neighbor_json["route_filtering"], indent=2)
             print(pretty_json)
@@ -1458,15 +1431,16 @@ def attachT0BGPprefixlist(csp_url, session_token, neighbor_id):
             print("Please choose 1, 2, 3 or 4 - Try again or check the help.")
 
 
-def detachT0BGPprefixlists(csp_url, session_token, neighbor_id):
+def detachT0BGPprefixlists(proxy, session_token, neighbor_id):
     """Detaches all prefix lists from specified T0 BGP neighbor - applicable for route-based VPN"""
-    neighbor_json = get_sddc_t0_bgp_single_neighbor_json(csp_url, session_token, neighbor_id)
+    neighbor_json = get_sddc_t0_bgp_single_neighbor_json(proxy, session_token, neighbor_id)
+    print(json.dumps(neighbor_json, indent=2))
     for key in list(neighbor_json.keys()):
         if key.startswith('_'):
             del neighbor_json[key]
     neighbor_json['route_filtering'] = [{'enabled': True, 'address_family': 'IPV4'}]
-    detach_sddc_t0_prefix_lists_json(csp_url, session_token, neighbor_id, neighbor_json)
-    print(f'Prefix lists detached from {neighbor_id}')
+    status_code = attach_bgp_prefix_list_json(proxy, session_token, neighbor_id, neighbor_json)
+    print(f'Status {status_code}. Prefix lists detached from {neighbor_id}')
 
 
 def newBGPprefixlist(csp_url, session_token):
@@ -1607,7 +1581,7 @@ def getSDDCT0BGPneighbors(csp_url, session_token):
             print(json.dumps(neighbors,indent=2))
 
 
-def getSDDCT0BGPRoutes(csp_url, session_token):
+def getSDDCT0BGPRoutes(proxy, session_token):
     """Prints BGP routes for T0 edge gateway"""
     bgp_neighbors = get_sddc_t0_bgp_neighbors_json(proxy, session_token)
     learnedRoutesTable = PrettyTable(['BGP Neighbor', 'Source Address', 'AS Path', 'Network', 'Next Hop'])
@@ -1647,7 +1621,6 @@ def getSDDCT0PrefixLists(proxy, session_token):
                 prefix_results[item].clear()
 #   remove empty dictionaries
     prefix_results = list(filter(None, prefix_results))
-    # print(json.dumps(prefix_results, indent = 2))
 #   print a nicely formatted list of only user-uploaded prefix lists; system created lists were eliminated in above code
     if len(prefix_results) != 0:
         for prefixlist in prefix_results:
@@ -1699,11 +1672,11 @@ def getSDDCT0staticroutes(proxy_url,session_token):
     """Prints static routes configured on T0 edge gateway"""
     t0_static_routes_json = get_sddc_t0_static_routes_json(proxy_url, session_token)
     t0_static_routes = t0_static_routes_json['results']
-    route_table = generate_table(t0_static_routes)
     route_table = PrettyTable(['Display Name', 'Network', 'Admin Distance', 'Next Hop'])
     for routes in t0_static_routes:
         route_table.add_row([routes['display_name'],routes['network'],routes['next_hops'][0]['admin_distance'],routes['next_hops'][0]['ip_address']])
     print (route_table.get_string(sort_key = operator.itemgetter(1,0), sortby = "Network", reversesort=True))
+
 
 # ============================
 # NSX-T - DNS
@@ -1844,8 +1817,6 @@ def getSDDCMGWRule(proxy_url, sessiontoken):
 
 
 def newSDDCDFWRule(proxy_url, sessiontoken, display_name, source_groups, destination_groups, services, action, section, sequence_number):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/domains/cgw/security-policies/" + section + "/rules/" + display_name)
     json_data = {
     "action": action,
     "destination_groups": destination_groups,
@@ -1861,73 +1832,43 @@ def newSDDCDFWRule(proxy_url, sessiontoken, display_name, source_groups, destina
     "source_groups": source_groups,
     "sequence_number": sequence_number
     }
-    response = requests.put(myURL, headers=myHeader, json=json_data)
-    json_response_status_code = response.status_code
+    json_response_status_code = put_sddc_dfw_rule_json(proxy_url, sessiontoken, section, display_name, json_data)
     return json_response_status_code
 
 
 def newSDDCDFWSection(proxy_url, sessiontoken, display_name, category):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/domains/cgw/security-policies/" + display_name)
     json_data = {
     "resource_type":"SecurityPolicy",
     "display_name": display_name,
     "id": display_name,
     "category": category,
     }
-    response = requests.put(myURL, headers=myHeader, json=json_data)
-    json_response_status_code = response.status_code
-    return json_response_status_code
-
-
-def removeSDDCDFWRule(proxy_url, sessiontoken, section, rule_id):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/domains/cgw/security-policies/" + section + "/rules/" + rule_id)
-    response = requests.delete(myURL, headers=myHeader)
-    json_response_status_code = response.status_code
-    return json_response_status_code
-
-
-def removeSDDCDFWSection(proxy_url, sessiontoken, section_id):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/domains/cgw/security-policies/" + section_id)
-    response = requests.delete(myURL, headers=myHeader)
-    json_response_status_code = response.status_code
+    json_response_status_code = put_sddc_dfw_section_json(proxy_url, sessiontoken, display_name, json_data)
     return json_response_status_code
 
 
 def getSDDCDFWRule(proxy_url, sessiontoken, section):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/domains/cgw/security-policies/" + section + "/rules")
-    response = requests.get(myURL, headers=myHeader)
-    json_response_status_code = response.status_code
-    if json_response_status_code != 200:
-        print("No section found.")
-    else:
-        json_response = response.json()
-        sddc_DFWrules = json_response['results']
-        table = PrettyTable(['ID', 'Name', 'Source', 'Destination', 'Services', 'Action', 'Sequence Number'])
-        for i in sddc_DFWrules:
-            # a and b are used to strip the infra/domain/mgw terms from the strings for clarity.
-            a = i['source_groups']
-            a = [z.replace('/infra/domains/cgw/groups/','') for z in a]
-            a = [z.replace('/infra/tier-0s/vmc/groups/','') for z in a]
-            b= i['destination_groups']
-            b = [z.replace('/infra/domains/cgw/groups/','') for z in b]
-            b = [z.replace('/infra/tier-0s/vmc/groups/','') for z in b]
-            c = i['services']
-            c = [z.replace('/infra/services/','') for z in c]
-            table.add_row([i['id'], i['display_name'], a, b, c, i['action'], i['sequence_number']])
-        return table
+    json_response = get_sddc_dfw_rule_json(proxy_url, sessiontoken, section)
+    sddc_DFWrules = json_response['results']
+    table = PrettyTable(['ID', 'Name', 'Source', 'Destination', 'Services', 'Action', 'Sequence Number'])
+    for i in sddc_DFWrules:
+        # a and b are used to strip the infra/domain/mgw terms from the strings for clarity.
+        a = i['source_groups']
+        a = [z.replace('/infra/domains/cgw/groups/','') for z in a]
+        a = [z.replace('/infra/tier-0s/vmc/groups/','') for z in a]
+        b= i['destination_groups']
+        b = [z.replace('/infra/domains/cgw/groups/','') for z in b]
+        b = [z.replace('/infra/tier-0s/vmc/groups/','') for z in b]
+        c = i['services']
+        c = [z.replace('/infra/services/','') for z in c]
+        table.add_row([i['id'], i['display_name'], a, b, c, i['action'], i['sequence_number']])
+    return table
 
 
 def getSDDCDFWSection(proxy_url, sessiontoken):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/policy/api/v1/infra/domains/cgw/security-policies/")
-    response = requests.get(myURL, headers=myHeader)
-    json_response = response.json()
+    json_response = get_sddc_dfw_section_json(proxy_url, sessiontoken)
     sddc_DFWsection = json_response['results']
-    table = PrettyTable(['id', 'Name','Category', 'Sequence Number'])
+    table = PrettyTable(['id', 'Name', 'Category', 'Sequence Number'])
     for i in sddc_DFWsection:
         table.add_row([i['id'], i['display_name'], i['category'], i['sequence_number']])
     return table
@@ -2220,45 +2161,26 @@ def getSDDCNATStatistics(proxy_url, sessiontoken, nat_id):
 # ============================
 
 
-def newSDDCPublicIP(proxy_url, sessiontoken, notes):
+def newSDDCPublicIP(proxy_url, session_token, ip_id):
     """ Gets a new public IP for compute workloads. Requires a description to be added to the public IP."""
-    myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
-    proxy_url_short = proxy_url.rstrip("sks-nsxt-manager")
-    myURL = (proxy_url_short + "cloud-service/api/v1/infra/public-ips/" + notes)
     json_data = {
-    "display_name" : notes
+    "display_name" : ip_id
     }
-    response = requests.put(myURL, headers=myHeader, json=json_data)
-    json_response_status_code = response.status_code
+    json_response_status_code = put_sddc_public_ip_json(proxy_url, session_token, ip_id, json_data)
     return json_response_status_code
 
 
-def removeSDDCPublicIP(proxy_url, sessiontoken, ip_id):
-    """ Removes a public IP. """
-    myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/cloud-service/api/v1/infra/public-ips/" + ip_id)
-    response = requests.delete(myURL, headers=myHeader)
-    json_response_status_code = response.status_code
-    return json_response_status_code
-
-
-def setSDDCPublicIP(proxy_url, sessiontoken, notes, ip_id):
+def setSDDCPublicIP(proxy_url, session_token, notes, ip_id):
     """ Update the description of an existing  public IP for compute workloads."""
-    myHeader = {"Content-Type": "application/json","Accept": "application/json", 'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/cloud-service/api/v1/infra/public-ips/" + ip_id)
     json_data = {
     "display_name" : notes
     }
-    response = requests.put(myURL, headers=myHeader, json=json_data)
-    json_response_status_code = response.status_code
+    json_response_status_code = put_sddc_public_ip_json(proxy_url, session_token, ip_id, json_data)
     return json_response_status_code
 
 
 def getSDDCPublicIP(proxy_url, sessiontoken):
-    myHeader = {'csp-auth-token': sessiontoken}
-    myURL = (proxy_url + "/cloud-service/api/v1/infra/public-ips")
-    response = requests.get(myURL, headers=myHeader)
-    json_response = response.json()
+    json_response = get_sddc_public_ip_json(proxy_url, sessiontoken)
     sddc_public_ips = json_response['results']
     table = PrettyTable(['IP', 'id', 'Notes'])
     for i in sddc_public_ips:
@@ -2270,18 +2192,147 @@ def getSDDCPublicIP(proxy_url, sessiontoken):
 # NSX-T - Segments
 # ============================
 
-def configure_t1(proxy, session_token, t1_id, connection_type):
+def configure_t1(**kwargs):
     """ Configures a Tier1 router as 'ROUTED', 'ISOLATED', or 'NATTED'... Creates a new T1 if it does not exist already."""
-    json_data = {"type": connection_type}
-    configure_t1_json(proxy, session_token, t1_id, json_data)
-    print(f'Tier1 gateway {t1_id} has been configured as {connection_type}')
+    if kwargs['objectname'] is None or kwargs['t1type'] is None:
+        print("Please use -n to specify the name of the T1 router to be configured, and -t1t or --t1type to specify the type (ROUTED/NATTED/ISOLATED).  Consult the help for additional options.")
+        sys.exit()
+    t1_id = kwargs["objectname"]
+    json_data = {"type": kwargs["t1type"]}
+    status = configure_t1_json(proxy, session_token, t1_id, json_data)
+    if status == 200:
+        print(f'Tier1 gateway {t1_id} has been configured as {kwargs["t1type"]}')
+    else:
+        print("T1 was not created.  Please check your syntax and try again.")
 
-def delete_t1(proxy, session_token, t1_id):
+def remove_t1(**kwargs):
     """ Deletes a Tier1 router as"""
-    delete_t1_json(proxy, session_token, t1_id)
-    print(f'Tier1 gateway {t1_id} has been deleted.')
+    t1_id = kwargs["objectname"]
+    if t1_id =="cgw" or t1_id =="mgw":
+        print(" ")
+        print("Seriously?")
+        print(" ")
+        print("That's a terrible idea!")
+        print("Are you trying to break the environment?")
+        print("Do not try to delete the default CGW of MGW.")
+        print(" ")
+        sys.exit()
+    status = delete_t1_json(proxy, session_token, t1_id)
+    if status ==200:
+        print(f'Tier1 gateway {t1_id} has been deleted.')
+    else: 
+        print("T1 was not removed.  Please check your syntax and try again.")
 
+def new_segment(**kwargs):
+    """
+    Creates a new network segment - requires options to configure correctly.
+    Supports new, 'moveable' networks under M18 and later as well as 'fixed' networks pre-M18
+    """
+    if kwargs['objectname'] is None or kwargs['gateway'] is None:
+        print("Please specify a name for the segment, and the gateway/network.")
+        sys.exit()
+    if kwargs['segment_type'] == "moveable" and kwargs['tier1_id'] is None:
+        print("Please specify either the segment type as 'fixed' (-st fixed) OR the ID of the Tier1 for connectivity (-t1id TIER1ID).  Use pyVMC -h for additional options.")
+        sys.exit()
+    segment_name = kwargs["objectname"]
+    segment=search_nsx_json(proxy, session_token, "Segment", segment_name)
+    if len(segment['results']) > 0:
+        print("The segment already appears to exist.")
+        sys.exit()
+    segment_type = kwargs['segment_type']
+    json_data = {
+        "display_name":f'{segment_name}',
+        "id":f'{segment_name}',
+        "advanced_config":{"connectivity":"ON"},
+        "type": "ROUTED",
+        "subnets":[
+            {
+                "gateway_address": f'{kwargs["gateway"]}'
+            }
+        ]
+        }
+    if kwargs['dhcp_range'] is not None:
+        json_data["subnets"][0]["dhcp_ranges"] = [f'{kwargs["dhcp_range"]}']
+    if kwargs['domain_name'] is not None:
+        json_data["domain_name"] = f'[{kwargs["domain_name"]}]'
+    if kwargs['connectivity'] == "ON":
+        json_data["advanced_config"]["connectivity"] = "ON"
+    if kwargs['routing_type'] is not None:
+        json_data["type"] = f'{kwargs["routing_type"]}'
+    if kwargs['tier1_id'] is not None:
+        if segment_type == "fixed":
+            json_data["connectivity_path"] = "/infra/tier-1s/cgw"
+        else:
+            json_data["connectivity_path"] = f'/infra/tier-1s/{kwargs["tier1_id"]}'
+    status = new_segment_json(proxy, session_token, segment_name, segment_type, json_data)
+    if status == 200:
+        print(f'The following network has been created: {segment_name}')
+        search_nsx(proxy, session_token, "Segment", segment_name)
+    else:
+        print("The segment was not created. Please check your syntax and try again.")
+      
+def configure_segment(**kwargs):
+    """
+    Reconfigures an existing network segment - requires options to configure correctly.
+    If segment does not exist, prompts user to create using 'new-segment'
+    Supports new, 'moveable' networks under M18 and later as well as 'fixed' networks pre-M18
+    """
+    if kwargs['objectname'] is None:
+        print("Please use -n to specify the name of the segment to be configured.  Consult the help for additional options.")
+        sys.exit()
+    segment_name = kwargs["objectname"]
+    # Quick search to see if the segment exists of not.
+    segment=search_nsx_json(proxy, session_token, "Segment", segment_name)
+    # If the segment exists, capture the path for the API call, and the existing configuration in JSON.
+    if len(segment['results']) > 0:
+        json_init=segment['results'][0]
+        segment_path = segment['results'][0]['path']
+    else:
+        print("The segment does not exist.  Please create a segment using 'new-segment'.")
+        sys.exit()
+    # Establish a list of keys to keep - these represent the values we are willing/able to update.
+    keep_list = ['display_name', 'connectivity_path','advanced_config','type']
+    # Construct a new JSON using just the keys we want to keep
+    json_data = dict([(key, val) for key, val in 
+           json_init.items() if key in keep_list])
+    # Update the json_data with the configuration specified by the user.
+    if kwargs['connectivity'] is not None:
+        json_data["advanced_config"]["connectivity"] = f'{kwargs["connectivity"]}'
+    if kwargs['routing_type'] is not None:
+        json_data["type"] = f'{kwargs["routing_type"]}'
+    if kwargs['tier1_id'] is not None:
+        if segment_path == "/infra/tier-1s/cgw":
+            print("This is a fixed segment - you may not alter the connectivity path.  Plese create a 'moveable' segment.")
+        else:
+            json_data["connectivity_path"] = f'/infra/tier-1s/{kwargs["tier1_id"]}'
+    # make the call to the API
+    status = configure_segment_json(proxy, session_token, segment_path, json_data)
+    # present results.
+    if status ==200:
+        print(f'The following network has been modified: {segment_name}')
+        search_nsx(proxy, session_token, "Segment", segment_name)
+    else: 
+        print("The segment was not modified.  Please check your syntax and try again.")
 
+def remove_segment(**kwargs):
+    """
+    Removes a network segment - requires options to configure correctly.
+    Supports new, 'moveable' networks under M18 and later as well as 'fixed' networks pre-M18
+    """
+    if kwargs['objectname'] is None:
+        print("Please use -n to specify a name for the segment to be removed.  Consult the help for additional options.")
+    segment_name = kwargs["objectname"]
+    segment=search_nsx_json(proxy, session_token, "Segment", segment_name)
+    if len(segment['results']) > 0:
+        segment_path = segment['results'][0]['path']
+        status = remove_segment_json(proxy, session_token, segment_path)
+        if status == 200:
+            print(f'The following network has been removed: {segment_name}')
+        else:
+            print("The segment was not removed.  Please check your syntax and try again.")
+    else:
+        print("The segment does not exist.")
+    
 def connect_segment(proxy_url, sessiontoken, network_id, gateway_address, dhcp_range, domain_name):
     """ Connects an existing SDDC Network to the default CGW. L2 VPN networks are not currently supported. """
     segment = search_nsx_json(proxy, session_token, "Segment", network_id)
@@ -2345,7 +2396,6 @@ def newSDDCnetworks(proxy_url, sessiontoken, display_name, gateway_address, dhcp
     table.add_row([display_name, gateway_address, dhcp_range, domain_name, routing_type])
     return table
 
-
 def newSDDCStretchednetworks(proxy_url, sessiontoken, display_name, tunnel_id, l2vpn_path):
     """ Creates a new stretched/extended Network. """
     json_data = {
@@ -2366,39 +2416,28 @@ def newSDDCStretchednetworks(proxy_url, sessiontoken, display_name, tunnel_id, l
     table.add_row([display_name, tunnel_id, "extended"])
     return table
 
-
 def removeSDDCNetworks(proxy_url, sessiontoken, network_id):
     """ Remove an SDDC Network """
     remove_sddc_networks_json(proxy_url, sessiontoken, network_id)
     print(f'The network {network_id} has been deleted.')
 
 def getSDDCnetworks(proxy_url, sessiontoken):
-    """Prints out all Compute Gateway segements in the SDDC"""
-    json_response = get_cgws_json(proxy_url, sessiontoken)
-    cgws = json_response['results']
-    for i in range(len(cgws)):
-        cgw_id = cgws[i]["id"]
-        if cgw_id != "mgw":
-            json_response = get_cgw_segments_json(proxy_url, sessiontoken, cgw_id)
-            sddc_networks = json_response['results']
-            table = PrettyTable(['Name', 'id', 'Type', 'Network', 'Default Gateway'])
-            table_extended = PrettyTable(['Name', 'id','Tunnel ID'])
-            for i in sddc_networks:
-                if ( i['type'] == "EXTENDED"):
-                    table_extended.add_row([i['display_name'], i['id'], i['l2_extension']['tunnel_id']])
-                elif ( i['type'] == "DISCONNECTED"):
-                    table.add_row([i['display_name'], i['id'], i['type'],"-", "-"])
-                else:
-                    table.add_row([i['display_name'], i['id'], i['type'], i['subnets'][0]['network'], i['subnets'][0]['gateway_address']])
-            print()
-            print(f'Compute Gateway:    {cgw_id}')
-            print("Routed Networks:")
-            print(table)
-            print("Extended Networks:")
-            print(table_extended)
-        # else:
-        #     print("Listing the networks for the mgw is not permitted.")
-
+    """Prints out all Compute Gateway segemtns in all the SDDCs in the Org"""
+    json_response = get_cgw_segments_json(proxy_url, sessiontoken)
+    sddc_networks = json_response['results']
+    table = PrettyTable(['Name', 'id', 'Type', 'Network', 'Default Gateway'])
+    table_extended = PrettyTable(['Name', 'id','Tunnel ID'])
+    for i in sddc_networks:
+        if ( i['type'] == "EXTENDED"):
+            table_extended.add_row([i['display_name'], i['id'], i['l2_extension']['tunnel_id']])
+        elif ( i['type'] == "DISCONNECTED"):
+            table.add_row([i['display_name'], i['id'], i['type'],"-", "-"])
+        else:
+            table.add_row([i['display_name'], i['id'], i['type'], i['subnets'][0]['network'], i['subnets'][0]['gateway_address']])
+    print("Routed Networks:")
+    print(table)
+    print("Extended Networks:")
+    print(table_extended)
 
 def createLotsNetworks(proxy_url, sessiontoken,network_number):
     """ Creates lots of networks! """
@@ -2736,7 +2775,7 @@ def getHelp():
     print("\nHere are the currently supported commands: ")
     print("\nCSP")
     print("\tServices")
-    print("\t   show-csp-services: Show entitled services\n")
+    print("\t   show-csp-services: Show entitled services")
     print("\tUser and Group management")
     print("\t   add-users-to-csp-group [GROUP_ID] [EMAILS]: CSP user to a group")
     print("\t   show-csp-group-diff [GROUP_ID] [showall|skipmembers|skipowners]: this compares the roles in the specified group with every user in the org and prints out a user-by-user diff")
@@ -2785,7 +2824,7 @@ def getHelp():
     print("\t    vpc-prefixes: Add or remove vTGW static routes\n")
     print("\nNSX-T")
     print("\tSearch")
-    print("\t    search-nsx [OBJECT_TYPE] [OBJECT_ID]: lists a table of specified objects returned from NSX; optionally include display name or ID")
+    print("\t    search-nsx [OBJECT_TYPE]: lists a table of specified objects returned from NSX")
     print("\tNSX-T Advanced Firewall Add-on - Add-on must be activated via GUI in the Cloud Services Portal")
     print("\t   show-nsxaf-status: Display the status of the NSX Advanced Firewall Add-on\n")
     print("\tDistributed IDS Operations")
@@ -2856,7 +2895,11 @@ def getHelp():
     print("\t   set-sddc-public-ip: update the description of an existing public IP")
     print("\t   show-sddc-public-ip: show the public IPs\n")
     print("\tVirtual Machine Networking")
-    print("\t   configure-t1 [T1 GATEWAY ID] [ROUTED or ISOLATED or NATTED]: show a list of tier-1 compute gateways")
+    print("\t   configure-t1 (-n NAME --t1type ROUTED/NATTED/ISOLATED): Create or configure a new or existing tier-1 compute gateways - compatible with VMC on AWS SDDC 1.18 and onwards")
+    print("\t   remove-t1 (-n NAME): Deletes a T1 gateway - compatible with VMC on AWS SDDC 1.18 and onwards;") 
+    print("\t   new-segment (try pyVMC.py -h for options): Creates a new 'fixed' or 'moveable' segment- compatible with VMC on AWS SDDC 1.18 and onwards; defaults to 'moveable.") 
+    print("\t   configure-segment (try pyVMC.py -h for options): Modifies the configuration of an existing 'fixed' or 'moveable' segment- compatible with VMC on AWS SDDC 1.18 and onwards; does not support changing from fixed/moveable.") 
+    print("\t   remove-segment (options: -n SEGMENT NAME): Removes a 'fixed' or 'moveable' segment- compatible with VMC on AWS SDDC 1.18 and onwards") 
     print("\t   connect-segment [NETWORK ID] [GATEWAY_ADDRESS] [DHCP_RANGE] [DOMAIN_NAME] for a DHCP network: changes an existing, disconnected segement to connected and 'routed'")
     print("\t   connect-segment [NETWORK ID] [GATEWAY_ADDRESS] for a static network: changes an existing, disconnected segement to connected and routed")
     print("\t   disconnect-segment [NETWORK ID]: Disconnect an existing routed segment and change to disconnected")
@@ -2906,6 +2949,24 @@ else:
 
 session_token = getAccessToken(Refresh_Token)
 proxy = getNSXTproxy(ORG_ID, SDDC_ID, session_token)
+
+# this is the top level parser
+ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+# ap.add_argument("-c", "--command", required=True)
+ap.add_argument("-n","--objectname", required=False, help= "The name of the object.  May not include spaces or hypens.")
+
+vmnetgrp = ap.add_argument_group('Virtual Machine Networking', "Options only used with 'new-segment' and 'configure-segment'")
+vmnetgrp.add_argument("-conn","--connectivity", choices=["ON", "OFF"], required=False, help= "Connectivity status for the segment - by default this is 'OFF'")
+vmnetgrp.add_argument("-dhcpr","--dhcp-range", required=False, help= "If applicable, the DHCP range of IP addresses to be distributed.")
+vmnetgrp.add_argument("-dn","--domain-name", required=False, help= "The domain name for the subnet - e.g. 'vmc.local'")
+vmnetgrp.add_argument("-gw","--gateway", required=False, help= "The gateway and subnet of the network - e.g. '192.138.1.1/24'")
+vmnetgrp.add_argument("-rt","--routing-type", choices=["ROUTED", "EXTENDED", "ROUTED_AND_EXTENDED", "DISCONNECTED"], required=False, help= "Routing type - by default this is set to 'ROUTED'")
+vmnetgrp.add_argument("-st","--segment-type", choices=["fixed","moveable"], default="moveable", required=False, help= "Determines if this this segment will be 'fixed' to the default CGW - by default this is 'MOVEABLE'")
+vmnetgrp.add_argument("-t1id","--tier1-id", required=False, help= "If applicable, the ID of the Tier1 gateway the network should be connected to.")
+vmnetgrp.add_argument("-t1t", "--t1type", choices=["ROUTED", "ISOLATED", "NATTED"], required=False, help= "Type of Tier1 router to create.")
+# vmnetgrp.add_argument("-xtid", "--ext-tunnel-id",required=False, help= "ID of the extended tunnel.")
+args, unknown = ap.parse_known_args()
+
 
 # ============================
 # CSP - Services
@@ -3145,6 +3206,7 @@ elif intent_name == "get-group-info":
         resource_id = get_resource_id(group_id, ORG_ID, session_token)
         get_group_info(group_id, resource_id, ORG_ID, session_token)
 
+
 # ============================
 # VTC - TGW Operations
 # ============================
@@ -3233,7 +3295,6 @@ elif intent_name == "vpc-prefixes":
         task_id = add_vpc_prefixes(user_list, vpc_list[int(n)-1], resource_id, ORG_ID, aws_acc, session_token)
         get_task_status(task_id, ORG_ID, session_token)
 
-
 # ============================
 # NSX-T - Search
 # ============================
@@ -3268,6 +3329,7 @@ elif intent_name == "search-nsx":
 # ============================
 # NSX-T - Advanced Firewall
 # ============================
+
 
 elif intent_name == "show-nsxaf-status":
     getNSXAFAddOn(ORG_ID, SDDC_ID, session_token)
@@ -3600,7 +3662,7 @@ elif intent_name == "remove-dfw-rule":
     else:
         section_id = sys.argv[2]
         rule_id = sys.argv[3]
-        if removeSDDCDFWRule(proxy, session_token, section_id, rule_id) == 200:
+        if delete_sddc_dfw_rule_json(proxy, session_token, section_id, rule_id) == 200:
             print("The rule " + rule_id + " has been deleted")
             print(getSDDCDFWRule(proxy,session_token, section_id))
         else :
@@ -3610,7 +3672,7 @@ elif intent_name == "remove-dfw-section":
         print("Incorrect syntax. ")
     else:
         section_id = sys.argv[2]
-        if removeSDDCDFWSection(proxy, session_token, section_id) == 200:
+        if delete_sddc_dfw_section_json(proxy, session_token, section_id) == 200:
             print("The section " + section_id + " has been deleted.")
             print(getSDDCDFWSection(proxy,session_token))
         else :
@@ -3920,7 +3982,7 @@ elif intent_name == "remove-sddc-public-ip":
         print("Incorrect syntax. ")
     else:
         public_ip = sys.argv[2]
-        if removeSDDCPublicIP(proxy, session_token, public_ip) == 200:
+        if delete_sddc_public_ip_json(proxy, session_token, public_ip) == 200:
             print(getSDDCPublicIP(proxy,session_token))
         else :
             print("Issues deleting the Public IP. Check the syntax.")
@@ -3943,28 +4005,15 @@ elif intent_name == "show-sddc-public-ip":
 # ============================
 
 elif intent_name == "configure-t1":
-    if len(sys.argv) == 4:
-        t1_id = sys.argv[2]
-        connection_type = sys.argv[3].upper()
-        configure_t1(proxy, session_token, t1_id, connection_type)
-    else:
-        print("Incorrect syntax.  Please provide only the T1 ID and the connectivity type - 'ROUTED' 'ISOLATED' or 'NATTED'.")
-elif intent_name == "delete-t1":
-    if len(sys.argv) != 3:
-        print("Incorrect syntax.  Please provide only the T1 ID.")
-    else:
-        t1_id = sys.argv[2]
-        if t1_id =="cgw" or t1_id =="mgw":
-            print(" ")
-            print("Seriously?")
-            print(" ")
-            print("That's a terrible idea!")
-            print("Are you trying to break the environment?")
-            print("Do not try to delete the default CGW of MGW.")
-            print(" ")
-        else:
-            delete_t1(proxy, session_token, t1_id)
-
+    configure_t1(**vars(args))
+elif intent_name == "remove-t1":
+    remove_t1(**vars(args))
+elif intent_name == "new-segment":
+    new_segment(**vars(args))
+elif intent_name == "configure-segment":
+    configure_segment(**vars(args))
+elif intent_name == "remove-segment":
+    remove_segment(**vars(args))
 elif intent_name == "new-network":
     if sys.argv[3].lower() == "routed" and len(sys.argv) == 7:
         # DHCP-Enabled Network

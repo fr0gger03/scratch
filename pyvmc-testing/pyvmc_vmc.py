@@ -79,45 +79,12 @@ def get_sddc_info_json (strProdURL, orgID, sessiontoken, sddcID):
 # ============================
 # TKG
 # ============================
-def disable_wcp_json(strProdURL, org_id, sddc_id, cluster_id, session_token):
-    """Disable Tanzu Kubernetes Grid on an SDDC"""
-    myHeader = {'csp-auth-token': session_token}
-    myURL = "{}/api/wcp/v1/orgs/{}/deployments/{}/clusters/{}/operations/disable-wcp".format(strProdURL, org_id, sddc_id, cluster_id)
-    body = {
-        # no need for a body
-    }
-    response = requests.post(myURL, json=body, headers=myHeader)
-    json_response = response.json()
-    if response.status_code == 200:
-        return json_response
-    else:
-        print("There was an error. Check the syntax.")
-        print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-        print(json_response['error_message'])
 
-def enable_wcp_json(strProdURL, org_id, sddc_id, cluster_id, session_token):
-    """Enable Tanzu Kubernetes Grid on an SDDC"""
-    myHeader = {'csp-auth-token': session_token}
-    myURL = "{}/api/wcp/v1/orgs/{}/deployments/{}/clusters/{}/operations/enable-wcp".format(strProdURL, org_id, sddc_id, cluster_id)
-    body = {
-        "egress_cidr": [egress_CIDR],
-        "ingress_cidr": [ingress_CIDR],
-        "namespace_cidr": [namespace_CIDR],
-        "service_cidr": service_CIDR
-    }
-    response = requests.post(myURL, json=body, headers=myHeader)
-    json_response = response.json()
-    if response.status_code == 200:
-        return json_response
-    else:
-        print("There was an error. Check the syntax.")
-        print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-        print(json_response['error_message'])
 
 # ============================
 # VTC - AWS Operations
 # ============================
-def connect_aws_account_json(account, region, resource_id, org_id, session_token):
+def connect_aws_account_json(strProdURL, account, region, resource_id, org_id, session_token):
     """Connect an vTGW to an AWS account"""
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/api/network/{}/aws/operations".format(strProdURL, org_id)
@@ -157,10 +124,11 @@ def disconnect_aws_account_json(strProdURL, account, resource_id, org_id, sessio
     response = requests.post(myURL, json=body, headers=myHeader)
     return response
 
+
 # ============================
 # VTC - DXGW Operations
 # ============================
-def attach_dxgw_json(routes, resource_id, org_id, dxgw_owner, dxgw_id, region, session_token):
+def attach_dxgw_json(strProdURL, routes, resource_id, org_id, dxgw_owner, dxgw_id, region, session_token):
     """Attach a Direct Connect Gateway to a vTGW"""
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/api/network/{}/aws/operations".format(strProdURL, org_id)
@@ -184,14 +152,14 @@ def attach_dxgw_json(routes, resource_id, org_id, dxgw_owner, dxgw_id, region, s
     }
     response = requests.post(myURL, json=body, headers=myHeader)
     json_response = response.json()
-    if response.status_code == 200:
+    if response.status_code == 201:
         return json_response
     else:
         print("There was an error. Check the syntax.")
         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
         print(json_response['error_message'])
 
-def detach_dxgw_json(resource_id, org_id, dxgw_id, session_token):
+def detach_dxgw_json(strProdURL, resource_id, org_id, dxgw_id, session_token):
     """Detach a Direct Connect Gateway from a vTGW"""
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/api/network/{}/aws/operations".format(strProdURL, org_id)
@@ -208,12 +176,12 @@ def detach_dxgw_json(resource_id, org_id, dxgw_id, session_token):
     }
     response = requests.post(myURL, json=body, headers=myHeader)
     json_response = response.json()
-    if response.status_code == 200:
+    if response.status_code == 201:
         return json_response
     else:
         print("There was an error. Check the syntax.")
         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
-        print(json_response['error_message'])
+        print(response)
 
 # ============================
 # VTC - SDDC Operations
@@ -311,6 +279,18 @@ def get_group_id_json(strProdURL, group, org_id, session_token):
         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
         print(json_response['error_message'])
 
+def get_resource_id_json(strProdURL, org_id, group_id, session_token):
+    myHeader = {'csp-auth-token': session_token}
+    myURL = "{}/api/network/{}/core/network-connectivity-configs/?group_id={}".format(strProdURL, org_id, group_id)
+    response = requests.get(myURL, headers=myHeader)
+    json_response = response.json()
+    if response.status_code == 200:
+        return json_response
+    else:
+        print("There was an error. Check the syntax.")
+        print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
+        print(json_response['error_message'])
+
 def get_sddc_groups_json(strProdURL, org_id, session_token):
     myHeader = {'csp-auth-token': session_token}
     myURL = "{}/api/inventory/{}/core/deployment-groups".format(strProdURL, org_id)
@@ -398,6 +378,7 @@ def ext_get_group_info_json(strProdURL, org_id, resource_id):
     else:
         print("There was an error. Check the syntax.")
         print(f'API call failed with status code {response.status_code}. URL: {myURL}.')
+
 
 # ============================
 # VTC - TGW Operations
